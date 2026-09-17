@@ -1,11 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inicio | MediaLens</title>
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/layout.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
 </head>
 <body>
-    
+  <header class="site-header">
+    <div class="container navbar">
+      <a class="navbar_brand" href="index.html">Media<span>Lens</span></a>
+      <button class="navbar_toggle" aria-label="Abrir menu" aria-expanded="false">&#9776;</button>
+      <ul class="navbar_links">
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="pages/buscar.html">Buscar</a></li>
+          <li><a href="pages/rankings.html">Rankings</a></li>
+          <li><a href="pages/recomendaciones.html">Recomendaciones</a></li>
+          <li><a href="pages/cines.html">Cines cercanos</a></li>
+      </ul>
+      <div class="navbar_actions">
+        <a class="btn btn-outline" href="pages/login.html">Ingresar</a>
+        <a class="btn btn-primary" href="pages/registro.html">Registrarse</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-header container">
+      <h1>Encontra que ver, sin saltar entre diez pestanas</h1>
+      <p class="text-muted">Buscá películas y series, compará opciones y descubrí cines cercanos para ir a verlas.</p>
+      <form class="form" style="max-width:600px; flex-direction:row;" action="pages/buscar.html" method="get">
+        <div class="form-field" style="flex:1;">
+          <label for="q" class="visually-hidden">Buscar</label>
+          <input type="text" id="q" name="q" placeholder="Titulo, actor o genero..." />
+        </div>
+        <button type="submit" class="btn btn-primary">Buscar</button>
+      </form>
+    </section>
+
+    <section class="section container">
+      <h2>Tendencias de la semana</h2>
+      <p class="placeholder-note">Esta grilla se va a completar con datos reales via API. Por ahora se muestran tarjetas de ejemplo.</p>
+      <div class="grid">
+        <article class="card">
+          <div class="card_media">Poster</div>
+          <div class="card_body">
+            <h3 class="card_title">Titulo de ejemplo</h3>
+            <p class="card_meta">Genero - Anio</p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card_media">Poster</div>
+          <div class="card_body">
+            <h3 class="card_title">Titulo de ejemplo</h3>
+            <p class="card_meta">Genero - Anio</p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card_media">Poster</div>
+          <div class="card_body">
+            <h3 class="card__title">Titulo de ejemplo</h3>
+            <p class="card_meta">Genero - Anio</p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card_media">Poster</div>
+          <div class="card_body">
+            <h3 class="card_title">Titulo de ejemplo</h3>
+            <p class="card_meta">Genero - Ano</p>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 MediaLens - TP Integrador, Diseno y Arquitecturas Web.</p>
+      <p><a href="admin/dashboard.html">Acceso administrativo</a></p>
+    </div>
+  </footer>
+
+  <button class="chatbot-toggle" aria-label="Abrir chatbot" title="Chatbot MediaLens (RF12 - pendiente)">&#128172;</button>
+
+  <script src="assets/js/main.js"></script>
 </body>
 </html>

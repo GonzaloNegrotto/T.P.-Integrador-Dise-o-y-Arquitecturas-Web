@@ -1,0 +1,146 @@
+/* ============================================
+   base.css
+   Reset, variables globales y tipografía.
+   No depende de ninguna página en particular:
+   cualquier vista puede usarlo tal cual.
+   ============================================ */
+
+:root {
+  /* Paleta */
+  /* Base */
+  --color-bg: #09090B;
+  --color-surface: #141214;
+  --color-surface-alt: #1E191B;
+  --color-border: #30272A;
+
+  /* Texto */
+  --color-text: #F5F1ED;
+  --color-text-muted: #A9A1A1;
+
+  /* Identidad */
+  --color-primary: #B8323C;
+  --color-primary-hover: #D0444E;
+
+  --color-secondary: #C49A5A;
+
+  /* Estados */
+  --color-danger: #D94A4A;
+  --color-success: #4E9B72;
+  /* Tipografía */
+  --font-base: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.5rem;
+  --fs-xl: 2rem;
+  --fs-xxl: 2.75rem;
+
+  /* Espaciado (escala de 4px) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  /* Otros */
+  --radius: 8px;
+  --radius-sm: 4px;
+  --container-max: 1180px;
+  --transition: 150ms ease-in-out;
+}
+
+/* Reset básico */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-base);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol {
+  margin: 0 0 var(--space-4) 0;
+}
+
+h1 {
+  font-size: var(--fs-xxl);
+}
+
+h2 {
+  font-size: var(--fs-xl);
+}
+
+h3 {
+  font-size: var(--fs-lg);
+}
+
+a {
+  color: var(--color-secondary);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--color-primary);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+ul,
+ol {
+  padding-left: var(--space-6);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.placeholder-note {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
