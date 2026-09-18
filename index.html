@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MediaLens: buscá películas y series, compará opciones, mirá rankings y encontrá cines cercanos." />
   <title>Inicio | MediaLens</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/base.css" />
   <link rel="stylesheet" href="assets/css/layout.css" />
   <link rel="stylesheet" href="assets/css/components.css" />
@@ -11,75 +15,339 @@
 <body>
   <header class="site-header">
     <div class="container navbar">
-      <a class="navbar_brand" href="index.html">Media<span>Lens</span></a>
-      <button class="navbar_toggle" aria-label="Abrir menu" aria-expanded="false">&#9776;</button>
+      <a class="navbar_brand" href="index.html">
+        <span class="navbar_logo" aria-hidden="true"></span>
+        Media<span>Lens</span>
+      </a>
       <ul class="navbar_links">
-          <li><a href="index.html">Inicio</a></li>
-          <li><a href="pages/buscar.html">Buscar</a></li>
-          <li><a href="pages/rankings.html">Rankings</a></li>
-          <li><a href="pages/recomendaciones.html">Recomendaciones</a></li>
-          <li><a href="pages/cines.html">Cines cercanos</a></li>
+        <li><a class="is-active" href="index.html">Inicio</a></li>
+        <li><a href="pages/buscar.html">Buscar</a></li>
+        <li><a href="pages/rankings.html">Rankings</a></li>
+        <li><a href="pages/recomendaciones.html">Recomendaciones</a></li>
+        <li><a href="pages/cines.html">Cines cercanos</a></li>
       </ul>
       <div class="navbar_actions">
         <a class="btn btn-outline" href="pages/login.html">Ingresar</a>
         <a class="btn btn-primary" href="pages/registro.html">Registrarse</a>
       </div>
+      <button class="navbar_toggle" aria-label="Abrir menú" aria-expanded="false">&#9776;</button>
     </div>
   </header>
 
   <main>
-    <section class="page-header container">
-      <h1>Encontra que ver, sin saltar entre diez pestanas</h1>
-      <p class="text-muted">Buscá películas y series, compará opciones y descubrí cines cercanos para ir a verlas.</p>
-      <form class="form" style="max-width:600px; flex-direction:row;" action="pages/buscar.html" method="get">
-        <div class="form-field" style="flex:1;">
-          <label for="q" class="visually-hidden">Buscar</label>
-          <input type="text" id="q" name="q" placeholder="Titulo, actor o genero..." />
+    <!-- Hero de portada -->
+    <section class="hero">
+      <div class="hero_glow" aria-hidden="true"></div>
+      <div class="container hero_inner">
+        <div class="hero_content">
+          <p class="eyebrow">Tu guía de cine y series</p>
+          <h1 class="hero_title">
+            Encontrá qué ver,<br />
+            <span class="text-gradient">sin saltar entre diez pestañas</span>
+          </h1>
+          <p class="hero_lead text-muted">
+            Buscá películas y series, compará opciones y descubrí cines cercanos para ir a verlas.
+          </p>
+
+          <form class="search" action="pages/buscar.html" method="get" role="search">
+            <span class="search_icon" aria-hidden="true">&#128269;</span>
+            <label for="q" class="visually-hidden">Buscar película, serie, actor o género</label>
+            <input type="search" id="q" name="q" placeholder="Título, actor o género..." />
+            <button type="submit" class="btn btn-primary">Buscar</button>
+          </form>
+
+          <ul class="hero_chips">
+            <li><a class="chip is-active" href="pages/buscar.html">Populares</a></li>
+            <li><a class="chip" href="pages/buscar.html?genero=accion">Acción</a></li>
+            <li><a class="chip" href="pages/buscar.html?genero=drama">Drama</a></li>
+            <li><a class="chip" href="pages/buscar.html?genero=comedia">Comedia</a></li>
+            <li><a class="chip" href="pages/buscar.html?genero=terror">Terror</a></li>
+          </ul>
+
+          <dl class="hero_stats">
+            <div class="stat">
+              <dd class="stat_value">12.400</dd>
+              <dt class="stat_label">Títulos</dt>
+            </div>
+            <div class="stat">
+              <dd class="stat_value">1.850</dd>
+              <dt class="stat_label">Series</dt>
+            </div>
+            <div class="stat">
+              <dd class="stat_value">96</dd>
+              <dt class="stat_label">Cines</dt>
+            </div>
+          </dl>
         </div>
-        <button type="submit" class="btn btn-primary">Buscar</button>
-      </form>
+
+        <div class="hero_showcase" aria-hidden="true">
+          <div class="poster poster--muted"></div>
+          <div class="poster"></div>
+          <div class="poster poster--gold"></div>
+        </div>
+      </div>
     </section>
 
+    <!-- Tendencias -->
     <section class="section container">
-      <h2>Tendencias de la semana</h2>
-      <p class="placeholder-note">Esta grilla se va a completar con datos reales via API. Por ahora se muestran tarjetas de ejemplo.</p>
-      <div class="grid">
+      <div class="section_head">
+        <div class="section_title-group">
+          <p class="eyebrow">En movimiento</p>
+          <h2>Tendencias de la semana</h2>
+        </div>
+        <a class="link-more" href="pages/buscar.html">Ver todo</a>
+      </div>
+
+      <p class="placeholder-note">
+        Esta grilla se va a completar con datos reales vía API. Por ahora se muestran tarjetas de ejemplo.
+      </p>
+
+      <div class="grid" style="margin-top: var(--space-6);">
         <article class="card">
-          <div class="card_media">Poster</div>
-          <div class="card_body">
-            <h3 class="card_title">Titulo de ejemplo</h3>
-            <p class="card_meta">Genero - Anio</p>
-          </div>
+          <a class="card_link" href="pages/buscar.html">
+            <div class="card_media poster">
+              <span class="badge badge--rating">8,7</span>
+              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
+            </div>
+            <div class="card_body">
+              <h3 class="card_title">Título de ejemplo</h3>
+              <p class="card_meta"><span>Drama</span><span>2026</span></p>
+            </div>
+          </a>
         </article>
+
         <article class="card">
-          <div class="card_media">Poster</div>
-          <div class="card_body">
-            <h3 class="card_title">Titulo de ejemplo</h3>
-            <p class="card_meta">Genero - Anio</p>
-          </div>
+          <a class="card_link" href="pages/buscar.html">
+            <div class="card_media poster poster--gold">
+              <span class="badge badge--rating">9,1</span>
+              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
+            </div>
+            <div class="card_body">
+              <h3 class="card_title">Título de ejemplo</h3>
+              <p class="card_meta"><span>Ciencia ficción</span><span>2025</span></p>
+            </div>
+          </a>
         </article>
+
         <article class="card">
-          <div class="card_media">Poster</div>
-          <div class="card_body">
-            <h3 class="card__title">Titulo de ejemplo</h3>
-            <p class="card_meta">Genero - Anio</p>
-          </div>
+          <a class="card_link" href="pages/buscar.html">
+            <div class="card_media poster poster--muted">
+              <span class="badge badge--rating">7,9</span>
+              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
+            </div>
+            <div class="card_body">
+              <h3 class="card_title">Título de ejemplo</h3>
+              <p class="card_meta"><span>Acción</span><span>2024</span></p>
+            </div>
+          </a>
         </article>
+
         <article class="card">
-          <div class="card_media">Poster</div>
-          <div class="card_body">
-            <h3 class="card_title">Titulo de ejemplo</h3>
-            <p class="card_meta">Genero - Ano</p>
-          </div>
+          <a class="card_link" href="pages/buscar.html">
+            <div class="card_media poster">
+              <span class="badge badge--rating">8,2</span>
+              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
+            </div>
+            <div class="card_body">
+              <h3 class="card_title">Título de ejemplo</h3>
+              <p class="card_meta"><span>Comedia</span><span>2026</span></p>
+            </div>
+          </a>
         </article>
+
+        <article class="card">
+          <a class="card_link" href="pages/buscar.html">
+            <div class="card_media poster poster--gold">
+              <span class="badge badge--rating">8,5</span>
+              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
+            </div>
+            <div class="card_body">
+              <h3 class="card_title">Título de ejemplo</h3>
+              <p class="card_meta"><span>Terror</span><span>2025</span></p>
+            </div>
+          </a>
+        </article>
+
+        <article class="card">
+          <a class="card_link" href="pages/buscar.html">
+            <div class="card_media poster poster--muted">
+              <span class="badge badge--rating">7,4</span>
+              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
+            </div>
+            <div class="card_body">
+              <h3 class="card_title">Título de ejemplo</h3>
+              <p class="card_meta"><span>Animación</span><span>2024</span></p>
+            </div>
+          </a>
+        </article>
+      </div>
+    </section>
+
+    <!-- Ranking -->
+    <section class="section container">
+      <div class="section_head">
+        <div class="section_title-group">
+          <p class="eyebrow">Ranking</p>
+          <h2>Top 5 de la semana</h2>
+        </div>
+        <a class="link-more" href="pages/rankings.html">Ver ranking completo</a>
+      </div>
+
+      <ol class="rail">
+        <li class="rank-card">
+          <span class="rank-card_number" aria-hidden="true">1</span>
+          <div class="rank-card_poster poster"></div>
+          <div class="rank-card_body">
+            <h3 class="rank-card_title">Título de ejemplo</h3>
+            <p class="card_meta"><span>Drama</span><span class="badge badge--rating">9,4</span></p>
+          </div>
+        </li>
+        <li class="rank-card">
+          <span class="rank-card_number" aria-hidden="true">2</span>
+          <div class="rank-card_poster poster poster--gold"></div>
+          <div class="rank-card_body">
+            <h3 class="rank-card_title">Título de ejemplo</h3>
+            <p class="card_meta"><span>Thriller</span><span class="badge badge--rating">9,2</span></p>
+          </div>
+        </li>
+        <li class="rank-card">
+          <span class="rank-card_number" aria-hidden="true">3</span>
+          <div class="rank-card_poster poster poster--muted"></div>
+          <div class="rank-card_body">
+            <h3 class="rank-card_title">Título de ejemplo</h3>
+            <p class="card_meta"><span>Acción</span><span class="badge badge--rating">8,9</span></p>
+          </div>
+        </li>
+        <li class="rank-card">
+          <span class="rank-card_number" aria-hidden="true">4</span>
+          <div class="rank-card_poster poster"></div>
+          <div class="rank-card_body">
+            <h3 class="rank-card_title">Título de ejemplo</h3>
+            <p class="card_meta"><span>Documental</span><span class="badge badge--rating">8,6</span></p>
+          </div>
+        </li>
+        <li class="rank-card">
+          <span class="rank-card_number" aria-hidden="true">5</span>
+          <div class="rank-card_poster poster poster--gold"></div>
+          <div class="rank-card_body">
+            <h3 class="rank-card_title">Título de ejemplo</h3>
+            <p class="card_meta"><span>Comedia</span><span class="badge badge--rating">8,4</span></p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Géneros -->
+    <section class="section container">
+      <div class="section_head">
+        <div class="section_title-group">
+          <p class="eyebrow">Explorar</p>
+          <h2>Navegá por género</h2>
+        </div>
+        <a class="link-more" href="pages/buscar.html">Búsqueda avanzada</a>
+      </div>
+
+      <div class="grid grid--tiles">
+        <a class="tile" href="pages/buscar.html?genero=accion">
+          <span class="tile_name">Acción</span>
+          <span class="tile_count">1.240 títulos</span>
+        </a>
+        <a class="tile" href="pages/buscar.html?genero=drama">
+          <span class="tile_name">Drama</span>
+          <span class="tile_count">2.105 títulos</span>
+        </a>
+        <a class="tile" href="pages/buscar.html?genero=comedia">
+          <span class="tile_name">Comedia</span>
+          <span class="tile_count">1.680 títulos</span>
+        </a>
+        <a class="tile" href="pages/buscar.html?genero=terror">
+          <span class="tile_name">Terror</span>
+          <span class="tile_count">870 títulos</span>
+        </a>
+        <a class="tile" href="pages/buscar.html?genero=ciencia-ficcion">
+          <span class="tile_name">Ciencia ficción</span>
+          <span class="tile_count">640 títulos</span>
+        </a>
+        <a class="tile" href="pages/buscar.html?genero=animacion">
+          <span class="tile_name">Animación</span>
+          <span class="tile_count">520 títulos</span>
+        </a>
+        <a class="tile" href="pages/buscar.html?genero=documental">
+          <span class="tile_name">Documental</span>
+          <span class="tile_count">410 títulos</span>
+        </a>
+        <a class="tile" href="pages/buscar.html?genero=romance">
+          <span class="tile_name">Romance</span>
+          <span class="tile_count">735 títulos</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Llamada a la acción: cines -->
+    <section class="section section--tight container">
+      <div class="cta">
+        <div class="cta_content">
+          <p class="eyebrow">Cines cercanos</p>
+          <h2>De la lista a la butaca</h2>
+          <p class="text-muted">
+            Mirá qué se está proyectando cerca tuyo, compará horarios y armá tu plan sin salir de MediaLens.
+          </p>
+        </div>
+        <div class="cta_actions">
+          <a class="btn btn-primary btn-lg" href="pages/cines.html">Ver cines cercanos</a>
+          <a class="btn btn-outline btn-lg" href="pages/recomendaciones.html">Recomendaciones</a>
+        </div>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
     <div class="container">
-      <p>&copy; 2026 MediaLens - TP Integrador, Diseno y Arquitecturas Web.</p>
-      <p><a href="admin/dashboard.html">Acceso administrativo</a></p>
+      <div class="footer_grid">
+        <div class="footer_about">
+          <a class="navbar_brand" href="index.html">
+            <span class="navbar_logo" aria-hidden="true"></span>
+            Media<span>Lens</span>
+          </a>
+          <p>
+            Buscador y comparador de películas y series, con rankings, recomendaciones y cartelera
+            de cines cercanos.
+          </p>
+        </div>
+
+        <div>
+          <p class="footer_title">Explorar</p>
+          <ul class="footer_list">
+            <li><a href="pages/buscar.html">Buscar</a></li>
+            <li><a href="pages/rankings.html">Rankings</a></li>
+            <li><a href="pages/recomendaciones.html">Recomendaciones</a></li>
+            <li><a href="pages/cines.html">Cines cercanos</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer_title">Cuenta</p>
+          <ul class="footer_list">
+            <li><a href="pages/login.html">Ingresar</a></li>
+            <li><a href="pages/registro.html">Registrarse</a></li>
+            <li><a href="admin/dashboard.html">Acceso administrativo</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer_title">Proyecto</p>
+          <ul class="footer_list">
+            <li><span class="text-muted">TP Integrador</span></li>
+            <li><span class="text-muted">Diseño y Arquitecturas Web</span></li>
+            <li><span class="text-muted">Edición 2026</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer_bottom">
+        <p>&copy; 2026 MediaLens &mdash; TP Integrador, Diseño y Arquitecturas Web.</p>
+        <p>Hecho con HTML y CSS.</p>
+      </div>
     </div>
   </footer>
 

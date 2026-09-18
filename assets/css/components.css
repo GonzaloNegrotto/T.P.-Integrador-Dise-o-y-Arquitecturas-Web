@@ -4,37 +4,77 @@
    formularios, badges, mensajes.
    ============================================ */
 
-/* Botones */
+/* ============================================
+   Botones
+   ============================================ */
 .btn {
-  display: inline-block;
-  border: none;
-  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
   padding: var(--space-2) var(--space-4);
   font-size: var(--fs-sm);
   font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background-color var(--transition), color var(--transition);
+  transition: background-color var(--transition), border-color var(--transition),
+    color var(--transition), transform var(--transition), box-shadow var(--transition);
+}
+
+.btn:active {
+  transform: translateY(1px);
 }
 
 .btn-primary {
-  background-color: var(--color-primary);
-  color: #101014;
+  background: var(--gradient-primary);
+  color: #FFF4F2;
+  box-shadow: var(--glow-primary);
 }
 
 .btn-primary:hover {
-  background-color: var(--color-primary-hover);
-  color: #101014;
+  background: linear-gradient(135deg, #DC4F59, var(--color-primary-hover));
+  color: #FFF4F2;
+  box-shadow: 0 16px 36px -12px rgba(var(--color-primary-rgb), 0.8);
+}
+
+.btn-secondary {
+  background: var(--gradient-gold);
+  color: #241A0E;
+  box-shadow: var(--glow-secondary);
+}
+
+.btn-secondary:hover {
+  color: #241A0E;
+  filter: brightness(1.06);
 }
 
 .btn-outline {
   background-color: transparent;
   color: var(--color-text);
-  border: 1px solid var(--color-border);
+  border-color: var(--color-border);
 }
 
 .btn-outline:hover {
+  background-color: rgba(var(--color-primary-rgb), 0.12);
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.btn-ghost {
+  background-color: rgba(245, 241, 237, 0.08);
+  border-color: var(--color-border-soft);
+  color: var(--color-text);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.btn-ghost:hover {
+  background-color: rgba(245, 241, 237, 0.16);
+  color: var(--color-text);
 }
 
 .btn-danger {
@@ -42,54 +82,573 @@
   color: #fff;
 }
 
-/* Tarjeta de contenido (película / serie / cine) */
-.card {
-  background-color: var(--color-surface);
+.btn-lg {
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--fs-base);
+}
+
+.btn-sm {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-xs);
+}
+
+/* ============================================
+   Chips / etiquetas de filtro
+   ============================================ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
+  background-color: rgba(245, 241, 237, 0.03);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  transition: border-color var(--transition), color var(--transition),
+    background-color var(--transition);
+}
+
+.chip:hover,
+.chip:focus-visible {
+  border-color: var(--color-primary);
+  background-color: rgba(var(--color-primary-rgb), 0.12);
+  color: var(--color-text);
+}
+
+.chip.is-active {
+  border-color: transparent;
+  background: var(--gradient-primary);
+  color: #FFF4F2;
+}
+
+/* ============================================
+   Badges (puntaje, ranking, estado)
+   ============================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.6;
+}
+
+.badge--rating {
+  background-color: rgba(9, 9, 11, 0.78);
+  border: 1px solid rgba(var(--color-secondary-rgb), 0.45);
+  color: var(--color-secondary);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.badge--rating::before {
+  content: "\2605";
+  font-size: 0.7rem;
+}
+
+.badge--new {
+  background: var(--gradient-primary);
+  color: #FFF4F2;
+  text-transform: uppercase;
+}
+
+.badge--soft {
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+/* ============================================
+   Póster placeholder
+   Mientras no haya imágenes de la API, se dibuja
+   un póster con degradados + bordes de filmina.
+   ============================================ */
+.poster {
+  --poster-rgb: var(--color-primary-rgb);
+  position: relative;
+  aspect-ratio: 2 / 3;
+  display: grid;
+  place-items: center;
   overflow: hidden;
+  background:
+    radial-gradient(120% 75% at 50% 0%, rgba(var(--poster-rgb), 0.3), transparent 62%),
+    linear-gradient(165deg, var(--color-surface-alt) 0%, #0F0D10 100%);
+  border-radius: var(--radius);
+}
+
+/* Perforaciones laterales de la filmina */
+.poster::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(to bottom, rgba(245, 241, 237, 0.09) 0 9px, transparent 9px 24px),
+    repeating-linear-gradient(to bottom, rgba(245, 241, 237, 0.09) 0 9px, transparent 9px 24px);
+  background-size: 6px 100%, 6px 100%;
+  background-position: 7px 0, calc(100% - 7px) 0;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/* "Lente" central: guiño al nombre MediaLens */
+.poster::after {
+  content: "";
+  width: 34%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(245, 241, 237, 0.16);
+  background:
+    radial-gradient(circle at 36% 30%, rgba(245, 241, 237, 0.42), transparent 45%),
+    radial-gradient(circle at 60% 70%, rgba(var(--poster-rgb), 0.55), rgba(9, 9, 11, 0.85) 72%);
+  box-shadow: 0 0 0 10px rgba(245, 241, 237, 0.025), inset 0 0 18px rgba(0, 0, 0, 0.6);
+}
+
+/* Variación cromática dentro de la misma paleta */
+.poster--gold {
+  --poster-rgb: var(--color-secondary-rgb);
+}
+
+.poster--muted {
+  --poster-rgb: 169, 161, 161;
+}
+
+/* ============================================
+   Tarjeta de contenido (película / serie / cine)
+   ============================================ */
+.card {
+  position: relative;
   display: flex;
   flex-direction: column;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: transform var(--transition-slow), border-color var(--transition),
+    box-shadow var(--transition-slow);
+}
+
+.card:hover,
+.card:focus-within {
+  transform: translateY(-6px);
+  border-color: rgba(var(--color-primary-rgb), 0.55);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(var(--color-primary-rgb), 0.15);
+}
+
+.card_link {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: inherit;
+}
+
+.card_link:hover {
+  color: inherit;
 }
 
 .card_media {
-  aspect-ratio: 2 / 3;
-  background-color: var(--color-surface-alt);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  font-size: var(--fs-sm);
+  position: relative;
+  border-radius: 0;
+}
+
+.card_media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Puntaje arriba a la derecha del póster */
+.card_media .badge--rating {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 2;
+}
+
+/* Capa que aparece al pasar el mouse */
+.card_overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, rgba(9, 9, 11, 0.1), rgba(9, 9, 11, 0.82));
+  opacity: 0;
+  transition: opacity var(--transition-slow);
+}
+
+.card:hover .card_overlay,
+.card:focus-within .card_overlay {
+  opacity: 1;
 }
 
 .card_body {
-  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-3) var(--space-4);
 }
 
 .card_title {
   font-size: var(--fs-base);
   font-weight: 600;
-  margin: 0 0 var(--space-1) 0;
+  line-height: 1.3;
+  margin: 0;
 }
 
 .card_meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-text-muted);
   font-size: var(--fs-sm);
+}
+
+/* Separador circular entre datos (año · género) */
+.card_meta > * + *::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin-right: var(--space-2);
+  border-radius: 50%;
+  background-color: currentColor;
+  vertical-align: middle;
+  opacity: 0.6;
+}
+
+/* ============================================
+   Tarjeta de ranking (Top 10)
+   ============================================ */
+.rank-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding-left: var(--space-8);
+}
+
+.rank-card_poster {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-soft);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--transition-slow), box-shadow var(--transition-slow);
+}
+
+.rank-card:hover .rank-card_poster {
+  transform: scale(1.03);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Numerazo calado detrás del póster */
+.rank-card_number {
+  position: absolute;
+  left: calc(var(--space-8) * -0.35);
+  bottom: 2.4rem;
+  z-index: 2;
+  font-family: var(--font-display);
+  font-size: 6.5rem;
+  line-height: 0.8;
+  color: var(--color-bg);
+  -webkit-text-stroke: 2px rgba(var(--color-secondary-rgb), 0.85);
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+  user-select: none;
+}
+
+.rank-card_body {
+  padding-top: var(--space-3);
+}
+
+.rank-card_title {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  margin: 0 0 var(--space-1);
+}
+
+/* ============================================
+   Tiles de género
+   ============================================ */
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 108px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-surface);
+  color: var(--color-text);
+  overflow: hidden;
+  transition: transform var(--transition-slow), border-color var(--transition);
+}
+
+.tile::before {
+  content: "";
+  position: absolute;
+  inset: auto -20% -60% auto;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--color-primary-rgb), 0.45), transparent 70%);
+  opacity: 0.55;
+  transition: opacity var(--transition-slow), transform var(--transition-slow);
+}
+
+.tile:nth-child(even)::before {
+  background: radial-gradient(circle, rgba(var(--color-secondary-rgb), 0.4), transparent 70%);
+}
+
+.tile:hover {
+  transform: translateY(-4px);
+  border-color: rgba(var(--color-primary-rgb), 0.5);
+  color: var(--color-text);
+}
+
+.tile:hover::before {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.tile_name {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tile_count {
+  position: relative;
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+}
+
+/* ============================================
+   Estadísticas del hero
+   ============================================ */
+.stat_value {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.stat_label {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ============================================
+   Formularios
+   ============================================ */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-field label {
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+input::placeholder,
+textarea::placeholder {
   color: var(--color-text-muted);
 }
 
-/* Widget de chatbot (RF12) — placeholder visual,
-   la lógica se conecta más adelante */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.22);
+}
+
+/* Buscador destacado (hero / cabeceras de listado) */
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 34rem;
+  padding: var(--space-2);
+  background-color: rgba(20, 18, 20, 0.85);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.search:focus-within {
+  border-color: rgba(var(--color-primary-rgb), 0.7);
+  box-shadow: var(--shadow-md), 0 0 0 4px rgba(var(--color-primary-rgb), 0.18);
+}
+
+.search_icon {
+  flex: none;
+  margin-left: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--fs-md);
+  line-height: 1;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-1);
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+
+.search input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ============================================
+   Banner de llamada a la acción
+   ============================================ */
+.cta {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-8);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(30rem 16rem at 12% 0%, rgba(var(--color-primary-rgb), 0.35), transparent 65%),
+    radial-gradient(24rem 14rem at 95% 110%, rgba(var(--color-secondary-rgb), 0.24), transparent 65%),
+    var(--gradient-surface);
+  overflow: hidden;
+}
+
+/* Cuadrícula tipo mapa de fondo */
+.cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(245, 241, 237, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 241, 237, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(70% 70% at 50% 50%, #000, transparent 85%);
+  -webkit-mask-image: radial-gradient(70% 70% at 50% 50%, #000, transparent 85%);
+  pointer-events: none;
+}
+
+.cta_content {
+  position: relative;
+  max-width: 40rem;
+}
+
+.cta_content h2 {
+  margin-bottom: var(--space-2);
+}
+
+.cta_content p {
+  margin: 0;
+}
+
+.cta_actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* ============================================
+   Widget de chatbot (RF12) — placeholder visual,
+   la lógica se conecta más adelante
+   ============================================ */
 .chatbot-toggle {
   position: fixed;
   bottom: var(--space-6);
   right: var(--space-6);
-  width: 52px;
-  height: 52px;
+  z-index: 60;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(var(--color-secondary-rgb), 0.35);
   border-radius: 50%;
-  background-color: var(--color-primary);
-  color: #101014;
-  border: none;
+  background: var(--gradient-primary);
+  color: #FFF4F2;
   font-size: var(--fs-lg);
+  line-height: 1;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--glow-primary), var(--shadow-md);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.chatbot-toggle:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 18px 40px -12px rgba(var(--color-primary-rgb), 0.9);
+}
+
+/* Anillo pulsante para llamar la atención */
+.chatbot-toggle::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.6);
+  animation: chatbot-pulse 2.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes chatbot-pulse {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.8;
+  }
+  70% {
+    transform: scale(1.22);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
 }

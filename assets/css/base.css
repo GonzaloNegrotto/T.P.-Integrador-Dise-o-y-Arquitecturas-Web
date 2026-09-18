@@ -6,12 +6,14 @@
    ============================================ */
 
 :root {
-  /* Paleta */
+  /* ---------- Paleta ---------- */
   /* Base */
   --color-bg: #09090B;
+  --color-bg-elev: #0D0C0F;
   --color-surface: #141214;
   --color-surface-alt: #1E191B;
   --color-border: #30272A;
+  --color-border-soft: rgba(245, 241, 237, 0.08);
 
   /* Texto */
   --color-text: #F5F1ED;
@@ -20,20 +22,40 @@
   /* Identidad */
   --color-primary: #B8323C;
   --color-primary-hover: #D0444E;
+  --color-primary-rgb: 184, 50, 60;
 
   --color-secondary: #C49A5A;
+  --color-secondary-rgb: 196, 154, 90;
 
   /* Estados */
   --color-danger: #D94A4A;
   --color-success: #4E9B72;
-  /* Tipografía */
-  --font-base: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Degradados y brillos derivados de la paleta */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary));
+  --gradient-gold: linear-gradient(135deg, #E2C08C, var(--color-secondary));
+  --gradient-surface: linear-gradient(160deg, var(--color-surface-alt), var(--color-surface));
+  --gradient-fade: linear-gradient(180deg, transparent 35%, rgba(9, 9, 11, 0.92) 100%);
+
+  --glow-primary: 0 12px 32px -12px rgba(var(--color-primary-rgb), 0.65);
+  --glow-secondary: 0 12px 32px -12px rgba(var(--color-secondary-rgb), 0.45);
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 12px 28px -14px rgba(0, 0, 0, 0.8);
+  --shadow-lg: 0 30px 64px -30px rgba(0, 0, 0, 0.9);
+
+  /* ---------- Tipografía ---------- */
+  --font-base: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Bebas Neue", "Oswald", "Segoe UI", Impact, sans-serif;
+
+  --fs-xs: 0.75rem;
   --fs-sm: 0.875rem;
   --fs-base: 1rem;
   --fs-md: 1.125rem;
   --fs-lg: 1.5rem;
-  --fs-xl: 2rem;
-  --fs-xxl: 2.75rem;
+  --fs-xl: clamp(1.75rem, 1.2rem + 1.8vw, 2.5rem);
+  --fs-xxl: clamp(2.75rem, 1.6rem + 4.6vw, 5rem);
 
   /* Espaciado (escala de 4px) */
   --space-1: 0.25rem;
@@ -43,12 +65,17 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
   --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
 
   /* Otros */
   --radius: 8px;
   --radius-sm: 4px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
   --container-max: 1180px;
   --transition: 150ms ease-in-out;
+  --transition-slow: 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Reset básico */
@@ -64,13 +91,22 @@ body {
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--color-bg);
+  background-image:
+    radial-gradient(60rem 40rem at 12% -10%, rgba(var(--color-primary-rgb), 0.16), transparent 60%),
+    radial-gradient(45rem 35rem at 95% 4%, rgba(var(--color-secondary-rgb), 0.1), transparent 60%);
+  background-repeat: no-repeat;
   color: var(--color-text);
   font-family: var(--font-base);
   font-size: var(--fs-base);
-  line-height: 1.5;
+  line-height: 1.6;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1,
@@ -83,6 +119,15 @@ ol {
   margin: 0 0 var(--space-4) 0;
 }
 
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.02;
+  text-transform: uppercase;
+}
+
 h1 {
   font-size: var(--fs-xxl);
 }
@@ -93,6 +138,8 @@ h2 {
 
 h3 {
   font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 a {
@@ -103,7 +150,7 @@ a {
 
 a:hover,
 a:focus-visible {
-  color: var(--color-primary);
+  color: var(--color-primary-hover);
 }
 
 img {
@@ -124,6 +171,39 @@ textarea {
   font-size: inherit;
 }
 
+/* Foco visible y consistente en toda la app */
+:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background-color: rgba(var(--color-primary-rgb), 0.45);
+  color: var(--color-text);
+}
+
+/* Scrollbar acorde al tema oscuro */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-primary);
+}
+
+/* ---------- Utilidades ---------- */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -137,10 +217,74 @@ textarea {
   color: var(--color-text-muted);
 }
 
+/* Antetítulo: etiqueta chiquita sobre los títulos de sección */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2) 0;
+  color: var(--color-secondary);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  background: var(--gradient-gold);
+  border-radius: var(--radius-pill);
+}
+
+/* Texto con degradado (palabras destacadas de un título) */
+.text-gradient {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Nota de contenido pendiente / mock (se usa en las vistas sin API aún) */
 .placeholder-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
   border: 1px dashed var(--color-border);
+  border-left: 3px solid var(--color-secondary);
   border-radius: var(--radius);
-  padding: var(--space-4);
+  background-color: rgba(var(--color-secondary-rgb), 0.05);
+  padding: var(--space-3) var(--space-4);
   color: var(--color-text-muted);
   font-size: var(--fs-sm);
+}
+
+.placeholder-note::before {
+  content: "i";
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(var(--color-secondary-rgb), 0.18);
+  color: var(--color-secondary);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-style: italic;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
