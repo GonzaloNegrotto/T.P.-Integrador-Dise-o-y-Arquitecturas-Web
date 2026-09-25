@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Creá tu cuenta en MediaLens y recibí recomendaciones de películas a tu medida." />
+  <title>Crear cuenta | MediaLens</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23B8323C'/%3E%3Ccircle cx='12' cy='11' r='5' fill='%23F5F1ED' fill-opacity='.8'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/layout.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <script src="../assets/js/aviso-servidor.js" defer></script>
+  <script type="module" src="../assets/js/registro.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container navbar">
+      <a class="navbar_brand" href="../index.html">
+        <span class="navbar_logo" aria-hidden="true"></span>
+        Media<span>Lens</span>
+      </a>
+      <button class="navbar_toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu-principal">&#9776;</button>
+      <nav class="navbar_menu" id="menu-principal" aria-label="Principal">
+        <ul class="navbar_links">
+          <li><a href="../index.html">Inicio</a></li>
+          <li><a href="buscar.html">Buscar</a></li>
+          <li><a href="rankings.html">Rankings</a></li>
+          <li><a href="recomendaciones.html">Recomendaciones</a></li>
+          <li><a href="cines.html">Cines cercanos</a></li>
+        </ul>
+        <div class="navbar_actions">
+          <a class="btn btn-outline" href="login.html">Ingresar</a>
+          <a class="btn btn-primary" href="registro.html">Registrarse</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="auth">
+    <div class="container auth_inner">
+      <section class="auth_card" id="tarjeta-registro" aria-labelledby="titulo-registro">
+        <p class="eyebrow">Crear cuenta</p>
+        <h1 class="auth_title" id="titulo-registro">Sumate a MediaLens</h1>
+        <p class="auth_intro text-muted">
+          Guardá tus películas favoritas y recibí recomendaciones según lo que te gusta ver.
+        </p>
+
+        <!-- novalidate: la validación la hace registro.js, con mensajes propios -->
+        <form class="form" id="form-registro" novalidate>
+          <div class="form-row">
+            <div class="form-field" data-campo="nombre">
+              <label for="registro-nombre">Nombre</label>
+              <input type="text" id="registro-nombre" name="nombre" autocomplete="given-name" maxlength="40" required />
+            </div>
+
+            <div class="form-field" data-campo="email">
+              <label for="registro-email">Email</label>
+              <input type="email" id="registro-email" name="email" autocomplete="email" placeholder="nombre@mail.com" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field" data-campo="password">
+              <label for="registro-password">Contraseña</label>
+              <div class="password-field">
+                <input type="password" id="registro-password" name="password" autocomplete="new-password" aria-describedby="requisitos-password" required />
+                <button type="button" class="password-toggle" data-mostrar-contrasena aria-controls="registro-password" aria-pressed="false">Mostrar</button>
+              </div>
+              <div class="strength" id="fuerza-contrasena" data-nivel="0" aria-hidden="true">
+                <span class="strength_bar"></span>
+                <span class="strength_bar"></span>
+                <span class="strength_bar"></span>
+                <span class="strength_bar"></span>
+              </div>
+              <p class="strength_label" id="fuerza-etiqueta" aria-live="polite"></p>
+              <ul class="requisitos" id="requisitos-password">
+                <li data-requisito="largo">8 caracteres o más <span class="visually-hidden">(pendiente)</span></li>
+                <li data-requisito="mayuscula">Una mayúscula <span class="visually-hidden">(pendiente)</span></li>
+                <li data-requisito="numero">Un número <span class="visually-hidden">(pendiente)</span></li>
+              </ul>
+            </div>
+
+            <div class="form-field" data-campo="confirmacion">
+              <label for="registro-confirmacion">Repetir contraseña</label>
+              <div class="password-field">
+                <input type="password" id="registro-confirmacion" name="confirmacion" autocomplete="new-password" required />
+                <button type="button" class="password-toggle" data-mostrar-contrasena aria-controls="registro-confirmacion" aria-pressed="false">Mostrar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field" data-campo="nacimiento">
+              <label for="registro-nacimiento">Fecha de nacimiento</label>
+              <input type="date" id="registro-nacimiento" name="nacimiento" autocomplete="bday" aria-describedby="ayuda-nacimiento" required />
+              <p class="field-hint" id="ayuda-nacimiento">Necesitás tener al menos 13 años.</p>
+            </div>
+          </div>
+
+          <fieldset class="form-field" data-campo="generos">
+            <legend>
+              Géneros favoritos
+              <span class="contador" id="contador-generos" aria-live="polite">0 de 5 elegidos</span>
+            </legend>
+            <div class="check-chips">
+              <label class="check-chip"><input type="checkbox" name="generos" value="Acción" /><span>Acción</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Aventura" /><span>Aventura</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Animación" /><span>Animación</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Comedia" /><span>Comedia</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Drama" /><span>Drama</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Terror" /><span>Terror</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Ciencia ficción" /><span>Ciencia ficción</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Romance" /><span>Romance</span></label>
+            </div>
+          </fieldset>
+
+          <div class="form-field" data-campo="terminos">
+            <label class="checkbox">
+              <input type="checkbox" id="registro-terminos" name="terminos" required />
+              <span>Acepto los términos y condiciones y la política de privacidad de MediaLens.</span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg btn-block">Crear cuenta</button>
+        </form>
+
+        <p class="auth_switch">¿Ya tenés cuenta? <a href="login.html">Ingresá</a></p>
+      </section>
+
+      <aside class="auth_aside" aria-label="Beneficios de tener una cuenta">
+        <div class="auth_posters" aria-hidden="true">
+          <div class="poster poster--muted"></div>
+          <div class="poster"></div>
+          <div class="poster poster--gold"></div>
+        </div>
+        <ul class="beneficios">
+          <li>
+            <span class="beneficios_icono" aria-hidden="true">&#9733;</span>
+            <div><strong>Tu lista de favoritas</strong>Guardá lo que querés ver y no lo pierdas entre pestañas.</div>
+          </li>
+          <li>
+            <span class="beneficios_icono" aria-hidden="true">&#10003;</span>
+            <div><strong>Recomendaciones a tu medida</strong>Basadas en los géneros que elijas.</div>
+          </li>
+          <li>
+            <span class="beneficios_icono" aria-hidden="true">&#9673;</span>
+            <div><strong>Cines cerca tuyo</strong>Encontrá dónde y cuándo ver cada estreno.</div>
+          </li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer_bottom">
+        <p>&copy; 2026 MediaLens &mdash; TP Integrador, Diseño y Arquitecturas Web.</p>
+        <p>Datos e imágenes de <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

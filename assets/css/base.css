@@ -29,7 +29,9 @@
 
   /* Estados */
   --color-danger: #D94A4A;
+  --color-danger-text: #F08C8C; /* variante clara para texto chico sobre fondo oscuro */
   --color-success: #4E9B72;
+  --color-success-text: #7CC39C;
 
   /* Degradados y brillos derivados de la paleta */
   --gradient-primary: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary));
@@ -93,6 +95,18 @@ body {
 
 html {
   scroll-behavior: smooth;
+  /* Calendarios, selects y scrollbars nativos en versión oscura */
+  color-scheme: dark;
+}
+
+/* Con un modal abierto, la página de atrás no scrollea */
+html.modal-abierto {
+  overflow: hidden;
+}
+
+/* El atributo hidden siempre gana, aunque el elemento tenga display: flex/grid */
+[hidden] {
+  display: none !important;
 }
 
 body {

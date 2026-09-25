@@ -3,14 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="MediaLens: buscá películas y series, compará opciones, mirá rankings y encontrá cines cercanos." />
+  <meta name="description" content="MediaLens: buscá películas, mirá qué está en tendencia, rankings y recomendaciones." />
   <title>Inicio | MediaLens</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23B8323C'/%3E%3Ccircle cx='12' cy='11' r='5' fill='%23F5F1ED' fill-opacity='.8'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://image.tmdb.org" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/base.css" />
   <link rel="stylesheet" href="assets/css/layout.css" />
   <link rel="stylesheet" href="assets/css/components.css" />
+  <script src="assets/js/aviso-servidor.js" defer></script>
+  <script type="module" src="assets/js/main.js"></script>
 </head>
 <body>
   <header class="site-header">
@@ -19,18 +23,20 @@
         <span class="navbar_logo" aria-hidden="true"></span>
         Media<span>Lens</span>
       </a>
-      <ul class="navbar_links">
-        <li><a class="is-active" href="index.html">Inicio</a></li>
-        <li><a href="pages/buscar.html">Buscar</a></li>
-        <li><a href="pages/rankings.html">Rankings</a></li>
-        <li><a href="pages/recomendaciones.html">Recomendaciones</a></li>
-        <li><a href="pages/cines.html">Cines cercanos</a></li>
-      </ul>
-      <div class="navbar_actions">
-        <a class="btn btn-outline" href="pages/login.html">Ingresar</a>
-        <a class="btn btn-primary" href="pages/registro.html">Registrarse</a>
-      </div>
-      <button class="navbar_toggle" aria-label="Abrir menú" aria-expanded="false">&#9776;</button>
+      <button class="navbar_toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu-principal">&#9776;</button>
+      <nav class="navbar_menu" id="menu-principal" aria-label="Principal">
+        <ul class="navbar_links">
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="pages/buscar.html">Buscar</a></li>
+          <li><a href="pages/rankings.html">Rankings</a></li>
+          <li><a href="pages/recomendaciones.html">Recomendaciones</a></li>
+          <li><a href="pages/cines.html">Cines cercanos</a></li>
+        </ul>
+        <div class="navbar_actions">
+          <a class="btn btn-outline" href="pages/login.html">Ingresar</a>
+          <a class="btn btn-primary" href="pages/registro.html">Registrarse</a>
+        </div>
+      </nav>
     </div>
   </header>
 
@@ -46,38 +52,35 @@
             <span class="text-gradient">sin saltar entre diez pestañas</span>
           </h1>
           <p class="hero_lead text-muted">
-            Buscá películas y series, compará opciones y descubrí cines cercanos para ir a verlas.
+            Buscá películas, mirá qué está en tendencia y descubrí cines cercanos para ir a verlas.
           </p>
 
-          <form class="search" action="pages/buscar.html" method="get" role="search">
-            <span class="search_icon" aria-hidden="true">&#128269;</span>
-            <label for="q" class="visually-hidden">Buscar película, serie, actor o género</label>
-            <input type="search" id="q" name="q" placeholder="Título, actor o género..." />
-            <button type="submit" class="btn btn-primary">Buscar</button>
+          <!-- Sin JS, el formulario igual funciona: recarga con ?q= y main.js lo retoma -->
+          <form class="search-form" id="form-busqueda" action="index.html" method="get" role="search" novalidate>
+            <div class="search_field" data-campo="q">
+              <div class="search">
+                <span class="search_icon" aria-hidden="true">&#128269;</span>
+                <label for="q" class="visually-hidden">Buscar película por título</label>
+                <input type="search" id="q" name="q" placeholder="Buscá una película por título..." autocomplete="off" maxlength="100" />
+                <button type="submit" class="btn btn-primary">Buscar</button>
+              </div>
+            </div>
           </form>
 
-          <ul class="hero_chips">
-            <li><a class="chip is-active" href="pages/buscar.html">Populares</a></li>
-            <li><a class="chip" href="pages/buscar.html?genero=accion">Acción</a></li>
-            <li><a class="chip" href="pages/buscar.html?genero=drama">Drama</a></li>
-            <li><a class="chip" href="pages/buscar.html?genero=comedia">Comedia</a></li>
-            <li><a class="chip" href="pages/buscar.html?genero=terror">Terror</a></li>
-          </ul>
+          <div class="hero_chips" role="group" aria-label="Filtrar tendencias por género">
+            <span class="hero_chips_label" aria-hidden="true">Filtrar:</span>
+            <button class="chip" type="button" data-filtro-genero="" aria-pressed="true">Todas</button>
+            <button class="chip" type="button" data-filtro-genero="28" data-nombre="Acción" aria-pressed="false">Acción</button>
+            <button class="chip" type="button" data-filtro-genero="35" data-nombre="Comedia" aria-pressed="false">Comedia</button>
+            <button class="chip" type="button" data-filtro-genero="18" data-nombre="Drama" aria-pressed="false">Drama</button>
+            <button class="chip" type="button" data-filtro-genero="27" data-nombre="Terror" aria-pressed="false">Terror</button>
+            <button class="chip" type="button" data-filtro-genero="878" data-nombre="Ciencia ficción" aria-pressed="false">Ciencia ficción</button>
+            <button class="chip" type="button" data-filtro-genero="16" data-nombre="Animación" aria-pressed="false">Animación</button>
+          </div>
 
-          <dl class="hero_stats">
-            <div class="stat">
-              <dd class="stat_value">12.400</dd>
-              <dt class="stat_label">Títulos</dt>
-            </div>
-            <div class="stat">
-              <dd class="stat_value">1.850</dd>
-              <dt class="stat_label">Series</dt>
-            </div>
-            <div class="stat">
-              <dd class="stat_value">96</dd>
-              <dt class="stat_label">Cines</dt>
-            </div>
-          </dl>
+          <div class="hero_featured" id="hero-destacada">
+            <span class="hero_featured_skeleton skeleton" aria-hidden="true"></span>
+          </div>
         </div>
 
         <div class="hero_showcase" aria-hidden="true">
@@ -88,198 +91,68 @@
       </div>
     </section>
 
+    <noscript>
+      <div class="container section--tight">
+        <p class="placeholder-note">Activá JavaScript para ver las películas en tendencia, el ranking y los géneros.</p>
+      </div>
+    </noscript>
+
+    <!-- Resultados de búsqueda / género (oculto hasta que se usa) -->
+    <section class="section container" id="resultados" aria-labelledby="resultados-titulo" hidden>
+      <div class="section_head">
+        <div class="section_title-group">
+          <p class="eyebrow" id="resultados-eyebrow">Búsqueda</p>
+          <h2 id="resultados-titulo">Resultados</h2>
+          <p class="section_status text-muted" id="resultados-estado" aria-live="polite"></p>
+        </div>
+        <button class="btn btn-outline" type="button" id="limpiar-resultados">&#10005; Volver a tendencias</button>
+      </div>
+      <div class="grid" id="grilla-resultados"></div>
+    </section>
+
     <!-- Tendencias -->
-    <section class="section container">
+    <section class="section container" id="tendencias" aria-labelledby="tendencias-titulo">
       <div class="section_head">
         <div class="section_title-group">
           <p class="eyebrow">En movimiento</p>
-          <h2>Tendencias de la semana</h2>
+          <h2 id="tendencias-titulo">Tendencias de la semana</h2>
         </div>
-        <a class="link-more" href="pages/buscar.html">Ver todo</a>
+        <div class="section_tools">
+          <div id="filtro-activo"></div>
+          <div class="tabs" role="tablist" aria-label="Período de las tendencias">
+            <button class="tab" type="button" role="tab" data-periodo="day" aria-selected="false" aria-controls="grilla-tendencias" tabindex="-1">Hoy</button>
+            <button class="tab" type="button" role="tab" data-periodo="week" aria-selected="true" aria-controls="grilla-tendencias">Esta semana</button>
+          </div>
+        </div>
       </div>
-
-      <p class="placeholder-note">
-        Esta grilla se va a completar con datos reales vía API. Por ahora se muestran tarjetas de ejemplo.
-      </p>
-
-      <div class="grid" style="margin-top: var(--space-6);">
-        <article class="card">
-          <a class="card_link" href="pages/buscar.html">
-            <div class="card_media poster">
-              <span class="badge badge--rating">8,7</span>
-              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
-            </div>
-            <div class="card_body">
-              <h3 class="card_title">Título de ejemplo</h3>
-              <p class="card_meta"><span>Drama</span><span>2026</span></p>
-            </div>
-          </a>
-        </article>
-
-        <article class="card">
-          <a class="card_link" href="pages/buscar.html">
-            <div class="card_media poster poster--gold">
-              <span class="badge badge--rating">9,1</span>
-              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
-            </div>
-            <div class="card_body">
-              <h3 class="card_title">Título de ejemplo</h3>
-              <p class="card_meta"><span>Ciencia ficción</span><span>2025</span></p>
-            </div>
-          </a>
-        </article>
-
-        <article class="card">
-          <a class="card_link" href="pages/buscar.html">
-            <div class="card_media poster poster--muted">
-              <span class="badge badge--rating">7,9</span>
-              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
-            </div>
-            <div class="card_body">
-              <h3 class="card_title">Título de ejemplo</h3>
-              <p class="card_meta"><span>Acción</span><span>2024</span></p>
-            </div>
-          </a>
-        </article>
-
-        <article class="card">
-          <a class="card_link" href="pages/buscar.html">
-            <div class="card_media poster">
-              <span class="badge badge--rating">8,2</span>
-              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
-            </div>
-            <div class="card_body">
-              <h3 class="card_title">Título de ejemplo</h3>
-              <p class="card_meta"><span>Comedia</span><span>2026</span></p>
-            </div>
-          </a>
-        </article>
-
-        <article class="card">
-          <a class="card_link" href="pages/buscar.html">
-            <div class="card_media poster poster--gold">
-              <span class="badge badge--rating">8,5</span>
-              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
-            </div>
-            <div class="card_body">
-              <h3 class="card_title">Título de ejemplo</h3>
-              <p class="card_meta"><span>Terror</span><span>2025</span></p>
-            </div>
-          </a>
-        </article>
-
-        <article class="card">
-          <a class="card_link" href="pages/buscar.html">
-            <div class="card_media poster poster--muted">
-              <span class="badge badge--rating">7,4</span>
-              <span class="card_overlay"><span class="btn btn-ghost btn-sm">Ver detalle</span></span>
-            </div>
-            <div class="card_body">
-              <h3 class="card_title">Título de ejemplo</h3>
-              <p class="card_meta"><span>Animación</span><span>2024</span></p>
-            </div>
-          </a>
-        </article>
-      </div>
+      <p class="visually-hidden" id="tendencias-aviso" aria-live="polite"></p>
+      <div class="grid" id="grilla-tendencias" role="tabpanel" aria-labelledby="tendencias-titulo"></div>
     </section>
 
     <!-- Ranking -->
-    <section class="section container">
+    <section class="section container" id="ranking" aria-labelledby="ranking-titulo">
       <div class="section_head">
         <div class="section_title-group">
           <p class="eyebrow">Ranking</p>
-          <h2>Top 5 de la semana</h2>
+          <h2 id="ranking-titulo">Top 5 de todos los tiempos</h2>
+          <p class="section_status text-muted">Las mejor puntuadas de TMDB, con más de 10.000 votos.</p>
         </div>
         <a class="link-more" href="pages/rankings.html">Ver ranking completo</a>
       </div>
-
-      <ol class="rail">
-        <li class="rank-card">
-          <span class="rank-card_number" aria-hidden="true">1</span>
-          <div class="rank-card_poster poster"></div>
-          <div class="rank-card_body">
-            <h3 class="rank-card_title">Título de ejemplo</h3>
-            <p class="card_meta"><span>Drama</span><span class="badge badge--rating">9,4</span></p>
-          </div>
-        </li>
-        <li class="rank-card">
-          <span class="rank-card_number" aria-hidden="true">2</span>
-          <div class="rank-card_poster poster poster--gold"></div>
-          <div class="rank-card_body">
-            <h3 class="rank-card_title">Título de ejemplo</h3>
-            <p class="card_meta"><span>Thriller</span><span class="badge badge--rating">9,2</span></p>
-          </div>
-        </li>
-        <li class="rank-card">
-          <span class="rank-card_number" aria-hidden="true">3</span>
-          <div class="rank-card_poster poster poster--muted"></div>
-          <div class="rank-card_body">
-            <h3 class="rank-card_title">Título de ejemplo</h3>
-            <p class="card_meta"><span>Acción</span><span class="badge badge--rating">8,9</span></p>
-          </div>
-        </li>
-        <li class="rank-card">
-          <span class="rank-card_number" aria-hidden="true">4</span>
-          <div class="rank-card_poster poster"></div>
-          <div class="rank-card_body">
-            <h3 class="rank-card_title">Título de ejemplo</h3>
-            <p class="card_meta"><span>Documental</span><span class="badge badge--rating">8,6</span></p>
-          </div>
-        </li>
-        <li class="rank-card">
-          <span class="rank-card_number" aria-hidden="true">5</span>
-          <div class="rank-card_poster poster poster--gold"></div>
-          <div class="rank-card_body">
-            <h3 class="rank-card_title">Título de ejemplo</h3>
-            <p class="card_meta"><span>Comedia</span><span class="badge badge--rating">8,4</span></p>
-          </div>
-        </li>
-      </ol>
+      <ol class="rail" id="lista-top"></ol>
     </section>
 
     <!-- Géneros -->
-    <section class="section container">
+    <section class="section container" id="generos" aria-labelledby="generos-titulo">
       <div class="section_head">
         <div class="section_title-group">
           <p class="eyebrow">Explorar</p>
-          <h2>Navegá por género</h2>
+          <h2 id="generos-titulo">Navegá por género</h2>
         </div>
-        <a class="link-more" href="pages/buscar.html">Búsqueda avanzada</a>
       </div>
-
-      <div class="grid grid--tiles">
-        <a class="tile" href="pages/buscar.html?genero=accion">
-          <span class="tile_name">Acción</span>
-          <span class="tile_count">1.240 títulos</span>
-        </a>
-        <a class="tile" href="pages/buscar.html?genero=drama">
-          <span class="tile_name">Drama</span>
-          <span class="tile_count">2.105 títulos</span>
-        </a>
-        <a class="tile" href="pages/buscar.html?genero=comedia">
-          <span class="tile_name">Comedia</span>
-          <span class="tile_count">1.680 títulos</span>
-        </a>
-        <a class="tile" href="pages/buscar.html?genero=terror">
-          <span class="tile_name">Terror</span>
-          <span class="tile_count">870 títulos</span>
-        </a>
-        <a class="tile" href="pages/buscar.html?genero=ciencia-ficcion">
-          <span class="tile_name">Ciencia ficción</span>
-          <span class="tile_count">640 títulos</span>
-        </a>
-        <a class="tile" href="pages/buscar.html?genero=animacion">
-          <span class="tile_name">Animación</span>
-          <span class="tile_count">520 títulos</span>
-        </a>
-        <a class="tile" href="pages/buscar.html?genero=documental">
-          <span class="tile_name">Documental</span>
-          <span class="tile_count">410 títulos</span>
-        </a>
-        <a class="tile" href="pages/buscar.html?genero=romance">
-          <span class="tile_name">Romance</span>
-          <span class="tile_count">735 títulos</span>
-        </a>
+      <div class="grid grid--tiles" id="grilla-generos"></div>
+      <div class="section_more">
+        <button class="btn btn-outline" type="button" id="ver-mas-generos" aria-controls="grilla-generos" aria-expanded="false" hidden>Ver todos los géneros</button>
       </div>
     </section>
 
@@ -346,13 +219,11 @@
 
       <div class="footer_bottom">
         <p>&copy; 2026 MediaLens &mdash; TP Integrador, Diseño y Arquitecturas Web.</p>
-        <p>Hecho con HTML y CSS.</p>
+        <p>Datos e imágenes de <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a>. Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.</p>
       </div>
     </div>
   </footer>
 
-  <button class="chatbot-toggle" aria-label="Abrir chatbot" title="Chatbot MediaLens (RF12 - pendiente)">&#128172;</button>
-
-  <script src="assets/js/main.js"></script>
+  <button class="chatbot-toggle" type="button" aria-label="Abrir chatbot" title="Chatbot MediaLens (próximamente)">&#128172;</button>
 </body>
 </html>

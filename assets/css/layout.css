@@ -23,13 +23,29 @@
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   border-bottom: 1px solid var(--color-border-soft);
+  transition: background-color var(--transition), box-shadow var(--transition);
+}
+
+/* Al scrollear, la cabecera se vuelve más sólida (lo agrega layout.js) */
+.site-header.is-scrolled {
+  background-color: rgba(13, 12, 15, 0.94);
+  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.9);
 }
 
 .navbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-6);
   padding-block: var(--space-3);
+}
+
+/* Envuelve links + botones: en escritorio van en línea,
+   en tablet/celular se convierten en el menú desplegable */
+.navbar_menu {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
 }
 
 .navbar_brand {
@@ -138,57 +154,87 @@
   gap: var(--space-2);
 }
 
-/* Menú responsivo */
-@media (max-width: 900px) {
+/* Menú responsivo: con 5 links + 2 botones, en tablet ya no entra en una línea.
+   El mismo corte (960px) está en layout.js para cerrar el menú al agrandar. */
+@media (max-width: 1080px) {
+  .navbar_menu {
+    gap: var(--space-4);
+  }
+
   .navbar_links {
     gap: var(--space-4);
   }
 }
 
-@media (max-width: 720px) {
-  .navbar {
-    position: relative;
-    gap: var(--space-3);
-  }
-
+@media (max-width: 960px) {
   .navbar_toggle {
     display: grid;
-    order: 3;
   }
 
-  .navbar_actions .btn-outline {
-    display: none;
-  }
-
-  .navbar_links {
+  .navbar_menu {
     display: none;
     position: absolute;
-    top: calc(100% + var(--space-3));
+    top: calc(100% + var(--space-2));
     left: var(--space-4);
     right: var(--space-4);
     flex-direction: column;
     align-items: stretch;
+    gap: var(--space-4);
+    max-height: calc(100dvh - 90px);
+    overflow-y: auto;
+    padding: var(--space-4);
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
-    padding: var(--space-4);
-    gap: var(--space-2);
   }
 
-  .navbar_links.is-open {
+  .navbar_menu.is-open {
     display: flex;
+    animation: menu-entrar 180ms ease-out;
+  }
+
+  .navbar_links {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
   }
 
   .navbar_links a {
     display: block;
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-3);
     border-radius: var(--radius);
     font-size: var(--fs-base);
   }
 
+  .navbar_links a::after {
+    display: none;
+  }
+
   .navbar_links a:hover {
     background-color: var(--color-surface-alt);
+  }
+
+  .navbar_links a.is-active {
+    background-color: rgba(var(--color-primary-rgb), 0.14);
+    box-shadow: inset 3px 0 0 var(--color-primary);
+  }
+
+  .navbar_actions {
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .navbar_actions .btn {
+    flex: 1;
+    padding-block: var(--space-3);
+  }
+}
+
+@keyframes menu-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
   }
 }
 
@@ -239,19 +285,32 @@
 .hero_chips {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
-  list-style: none;
   margin: var(--space-4) 0 var(--space-8);
-  padding: 0;
 }
 
-.hero_stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-8);
-  margin: 0;
+.hero_chips_label {
+  margin-right: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Película N.º 1 (la completa main.js con datos reales) */
+.hero_featured {
+  min-height: 78px;
   padding-top: var(--space-6);
   border-top: 1px solid var(--color-border-soft);
+}
+
+.hero_featured_skeleton {
+  display: block;
+  width: min(100%, 300px);
+  height: 54px;
+  border-radius: var(--radius-pill);
 }
 
 /* Collage de pósters del hero */
@@ -321,14 +380,12 @@
 
   .hero_showcase {
     grid-template-columns: repeat(2, 1fr);
+    /* margen para que los pósters rotados no queden cortados en el borde */
+    padding-inline: var(--space-3);
   }
 
   .hero_showcase .poster:nth-child(3) {
     display: none;
-  }
-
-  .hero_stats {
-    gap: var(--space-6);
   }
 }
 
@@ -342,6 +399,8 @@
 
 .section {
   padding-block: var(--space-12);
+  /* Al hacer scroll hasta una sección, que no quede tapada por la cabecera fija */
+  scroll-margin-top: 64px;
 }
 
 .section--tight {
@@ -364,6 +423,30 @@
 
 .section_title-group {
   min-width: 0;
+}
+
+.section_status {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+}
+
+.section_status:empty {
+  display: none;
+}
+
+/* Controles a la derecha del título (pestañas, filtro activo) */
+.section_tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Botón "ver más" centrado debajo de una grilla */
+.section_more {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
 }
 
 .link-more {
@@ -396,6 +479,16 @@
 .grid--tiles {
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: var(--space-3);
+}
+
+/* En celular, el mínimo de 160px deja una sola columna de pósters
+   enormes: se fuerzan 2 columnas, como en cualquier app de cine. */
+@media (max-width: 560px) {
+  .grid,
+  .grid--tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4) var(--space-3);
+  }
 }
 
 /* Fila con desplazamiento horizontal (rankings, novedades) */
@@ -497,4 +590,149 @@
   .footer_about {
     grid-column: 1 / -1;
   }
+}
+
+/* ============================================
+   Páginas de cuenta (registro / login)
+   ============================================ */
+.auth {
+  padding-block: var(--space-12) var(--space-8);
+}
+
+.auth_inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  align-items: start;
+  gap: var(--space-12);
+}
+
+.auth--compacta .auth_inner {
+  grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
+}
+
+.auth_card {
+  padding: var(--space-8);
+  background-color: rgba(20, 18, 20, 0.85);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.auth_title {
+  font-size: clamp(2.25rem, 1.6rem + 2vw, 3.25rem);
+  margin-bottom: var(--space-2);
+}
+
+.auth_intro {
+  margin-bottom: var(--space-6);
+}
+
+.auth_switch {
+  margin: var(--space-6) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+/* Columna decorativa con pósters y beneficios */
+.auth_aside {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: var(--space-8);
+}
+
+.auth_posters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.auth_posters .poster {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+.auth_posters .poster:nth-child(2) {
+  transform: translateY(-18px);
+}
+
+.beneficios {
+  display: grid;
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.beneficios li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.beneficios strong {
+  display: block;
+  color: var(--color-text);
+  font-size: var(--fs-base);
+}
+
+.beneficios_icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: rgba(var(--color-secondary-rgb), 0.14);
+  color: var(--color-secondary);
+  font-weight: 700;
+}
+
+@media (max-width: 960px) {
+  .auth_inner,
+  .auth--compacta .auth_inner {
+    grid-template-columns: 1fr;
+  }
+
+  .auth_card {
+    width: 100%;
+    max-width: 38rem;
+    justify-self: center;
+  }
+
+  /* En pantallas chicas el formulario va primero y la decoración se oculta */
+  .auth_aside {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .auth {
+    padding-block: var(--space-6);
+  }
+
+  .auth_card {
+    padding: var(--space-6) var(--space-4);
+  }
+}
+
+/* ============================================
+   Página 404
+   ============================================ */
+.pagina-error {
+  display: grid;
+  place-items: center;
+  min-height: 70vh;
+  padding-block: var(--space-12);
+}
+
+.pagina-error_numero {
+  font-family: var(--font-display);
+  font-size: clamp(6rem, 4rem + 10vw, 11rem);
+  line-height: 0.9;
+  color: transparent;
+  -webkit-text-stroke: 2px rgba(var(--color-secondary-rgb), 0.8);
 }

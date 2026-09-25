@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Ingresá a tu cuenta de MediaLens." />
+  <title>Ingresar | MediaLens</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23B8323C'/%3E%3Ccircle cx='12' cy='11' r='5' fill='%23F5F1ED' fill-opacity='.8'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/layout.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <script src="../assets/js/aviso-servidor.js" defer></script>
+  <script type="module" src="../assets/js/login.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container navbar">
+      <a class="navbar_brand" href="../index.html">
+        <span class="navbar_logo" aria-hidden="true"></span>
+        Media<span>Lens</span>
+      </a>
+      <button class="navbar_toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu-principal">&#9776;</button>
+      <nav class="navbar_menu" id="menu-principal" aria-label="Principal">
+        <ul class="navbar_links">
+          <li><a href="../index.html">Inicio</a></li>
+          <li><a href="buscar.html">Buscar</a></li>
+          <li><a href="rankings.html">Rankings</a></li>
+          <li><a href="recomendaciones.html">Recomendaciones</a></li>
+          <li><a href="cines.html">Cines cercanos</a></li>
+        </ul>
+        <div class="navbar_actions">
+          <a class="btn btn-outline" href="login.html">Ingresar</a>
+          <a class="btn btn-primary" href="registro.html">Registrarse</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="auth auth--compacta">
+    <div class="container auth_inner">
+      <section class="auth_card" id="tarjeta-login" aria-labelledby="titulo-login">
+        <p class="eyebrow">Ingresar</p>
+        <h1 class="auth_title" id="titulo-login">Hola de nuevo</h1>
+        <p class="auth_intro text-muted">Ingresá para ver tus favoritas y recomendaciones.</p>
+
+        <form class="form" id="form-login" novalidate>
+          <div class="form-field" data-campo="email">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" name="email" autocomplete="email" placeholder="nombre@mail.com" required />
+          </div>
+
+          <div class="form-field" data-campo="password">
+            <label for="login-password">Contraseña</label>
+            <div class="password-field">
+              <input type="password" id="login-password" name="password" autocomplete="current-password" required />
+              <button type="button" class="password-toggle" data-mostrar-contrasena aria-controls="login-password" aria-pressed="false">Mostrar</button>
+            </div>
+          </div>
+
+          <div class="form_fila-extra">
+            <label class="checkbox">
+              <input type="checkbox" id="login-recordar" name="recordar" />
+              <span>Recordar mi email</span>
+            </label>
+            <button type="button" class="link-boton" id="olvide-contrasena">¿Olvidaste tu contraseña?</button>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg btn-block">Ingresar</button>
+        </form>
+
+        <p class="auth_switch">¿No tenés cuenta? <a href="registro.html">Registrate</a></p>
+      </section>
+
+      <aside class="auth_aside" aria-label="Qué encontrás en MediaLens">
+        <div class="auth_posters" aria-hidden="true">
+          <div class="poster poster--gold"></div>
+          <div class="poster"></div>
+          <div class="poster poster--muted"></div>
+        </div>
+        <ul class="beneficios">
+          <li>
+            <span class="beneficios_icono" aria-hidden="true">&#9733;</span>
+            <div><strong>Tus favoritas, siempre a mano</strong>Todo lo que guardaste, en un solo lugar.</div>
+          </li>
+          <li>
+            <span class="beneficios_icono" aria-hidden="true">&#10003;</span>
+            <div><strong>Recomendaciones nuevas cada semana</strong>Según lo que está en tendencia y lo que te gusta.</div>
+          </li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer_bottom">
+        <p>&copy; 2026 MediaLens &mdash; TP Integrador, Diseño y Arquitecturas Web.</p>
+        <p>Datos e imágenes de <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
