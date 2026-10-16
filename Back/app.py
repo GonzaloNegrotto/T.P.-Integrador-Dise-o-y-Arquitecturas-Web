@@ -227,12 +227,17 @@ def resumir_pelicula(pelicula, nombres_generos):
     }
 
 
+def es_contenido_adulto(pelicula):
+    # TMDB marca el contenido explícito con "adult" y el erótico con "softcore".
+    return bool(pelicula.get("adult") or pelicula.get("softcore"))
+
+
 def listar_peliculas(datos):
     nombres = mapa_generos()
     return [
         resumir_pelicula(p, nombres)
         for p in datos.get("results", [])
-        if not p.get("adult")
+        if not es_contenido_adulto(p)
     ]
 
 
@@ -325,7 +330,7 @@ def pelicula(id_pelicula):
         3600,
         lambda: consultar_tmdb(f"/movie/{id_pelicula}", {"append_to_response": "credits"}),
     )
-    if datos.get("adult"):
+    if es_contenido_adulto(datos):
         raise ErrorApi(404, "No encontramos lo que buscabas.")
 
     creditos = datos.get("credits") or {}
