@@ -7,7 +7,7 @@
 
 import { decorarConPosters } from "./auth-decoracion.js";
 import { iniciarLayout } from "./layout.js";
-import { crearElemento, crearEstado, esperar, mostrarToast } from "./ui.js";
+import { crearElemento, crearEstado, mostrarToast } from "./ui.js";
 import { activarBotonesContrasena, crearValidador, reglas } from "./validacion.js";
 
 const CLAVE_EMAIL = "medialens:email-recordado";
@@ -61,25 +61,34 @@ formulario.addEventListener("submit", async (evento) => {
   botonEnviar.disabled = true;
   botonEnviar.classList.add("is-loading");
   botonEnviar.textContent = "Ingresando…";
-  await esperar(800); // simula la demora de un servidor real
+  try {
+    const respuesta = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: formulario.elements.password.value }),
+    });
+    const resultado = await respuesta.json();
+    if (!respuesta.ok) throw new Error(resultado.error || "No se pudo iniciar sesión.");
 
-  const exito = crearEstado({
-    tipo: "exito",
-    titulo: "¡Hola de nuevo!",
-    mensaje: `Ingresaste como ${email}.`,
-  });
-  exito.append(
-    crearElemento("div", { clase: "estado_acciones" }, [
-      crearElemento("a", { clase: "btn btn-primary", texto: "Ir al inicio", atributos: { href: "../index.html" } }),
-    ]),
-    crearElemento("p", {
-      clase: "estado_detalle",
-      texto: "Versión de demostración: la autenticación real se conecta en una próxima entrega.",
-    }),
-  );
-  tarjeta.replaceChildren(exito);
-  exito.setAttribute("tabindex", "-1");
-  exito.focus();
+    const exito = crearEstado({
+      tipo: "exito",
+      titulo: `¡Hola, ${resultado.usuario.nombre}!`,
+      mensaje: "Iniciaste sesión correctamente.",
+    });
+    exito.append(
+      crearElemento("div", { clase: "estado_acciones" }, [
+        crearElemento("a", { clase: "btn btn-primary", texto: "Ir al inicio", atributos: { href: "../index.html" } }),
+      ]),
+    );
+    tarjeta.replaceChildren(exito);
+    exito.setAttribute("tabindex", "-1");
+    exito.focus();
+  } catch (error) {
+    mostrarToast(error.message, { tipo: "error" });
+    botonEnviar.disabled = false;
+    botonEnviar.classList.remove("is-loading");
+    botonEnviar.textContent = "Ingresar";
+  }
 });
 
 botonOlvido.addEventListener("click", () => {
