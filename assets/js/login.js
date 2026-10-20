@@ -6,7 +6,7 @@
    ============================================ */
 
 import { decorarConPosters } from "./auth-decoracion.js";
-import { iniciarLayout } from "./layout.js";
+import { actualizarSesion, iniciarLayout } from "./layout.js";
 import { crearElemento, crearEstado, mostrarToast } from "./ui.js";
 import { activarBotonesContrasena, crearValidador, reglas } from "./validacion.js";
 
@@ -69,6 +69,7 @@ formulario.addEventListener("submit", async (evento) => {
     });
     const resultado = await respuesta.json();
     if (!respuesta.ok) throw new Error(resultado.error || "No se pudo iniciar sesión.");
+    await actualizarSesion();
 
     const exito = crearEstado({
       tipo: "exito",
