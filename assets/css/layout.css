@@ -743,3 +743,130 @@
   color: transparent;
   -webkit-text-stroke: 2px rgba(var(--color-secondary-rgb), 0.8);
 }
+
+/* ============================================
+   Página de cines cercanos
+   ============================================ */
+.cines {
+  padding-bottom: var(--space-8);
+}
+
+.cines_cabecera {
+  padding-block: var(--space-12) var(--space-6);
+}
+
+.cines_titulo {
+  margin-bottom: var(--space-3);
+}
+
+.cines_intro {
+  max-width: 46rem;
+  margin-bottom: var(--space-6);
+  font-size: var(--fs-md);
+}
+
+.cines_controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.cines_form {
+  flex: 1 1 26rem;
+  max-width: 34rem;
+}
+
+.cines_form .search {
+  max-width: none;
+}
+
+.cines_separador {
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cines_radio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+.cines_estado {
+  min-height: 1.6em;
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.cines_layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+
+.cines_lista {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cines_mapa {
+  position: sticky;
+  top: 84px;
+  z-index: 0;
+  height: calc(100vh - 120px);
+  min-height: 420px;
+  max-height: 720px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.cines_mapa.is-sin-mapa {
+  position: static;
+  height: auto;
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .cines_layout {
+    grid-template-columns: 1fr;
+  }
+
+  .cines_mapa {
+    order: -1;
+    position: relative;
+    top: 0;
+    height: 340px;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .cines_cabecera {
+    padding-block: var(--space-8) var(--space-4);
+  }
+
+  .cines_controles > .btn {
+    width: 100%;
+  }
+
+  .cines_separador {
+    width: 100%;
+    text-align: center;
+  }
+
+  .cines_mapa {
+    height: 280px;
+  }
+}

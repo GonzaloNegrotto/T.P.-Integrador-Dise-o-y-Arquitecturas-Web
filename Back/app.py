@@ -14,8 +14,10 @@ Uso (con el venv activado, desde la raíz del proyecto):
 y abrir http://localhost:5000
 """
 
+import math
 import mimetypes
 import os
+import threading
 import time
 from datetime import date
 from pathlib import Path
@@ -471,6 +473,174 @@ def pelicula(id_pelicula):
             for c in creditos.get("cast", [])[:6]
         ],
     )
+
+NOMINATIM_URL = "https://nominatim.openstreetmap.org"
+RADIOS_KM = (2, 5, 10)
+LIMITE_NOMINATIM = 40  # máximo de resultados que devuelve Nominatim por consulta
+
+# Política de uso de Nominatim: identificar la aplicación y no superar una
+# consulta por segundo. 
+sesion_osm = requests.Session()
+sesion_osm.headers.update({
+    "User-Agent": "MediaLens/1.0 (Trabajo Practico Integrador UAI)",
+    "Accept-Language": "es",
+})
+_candado_osm = threading.Lock()
+_ultima_consulta_osm = 0.0
+
+
+def consultar_nominatim(ruta, parametros):
+    """GET a Nominatim respetando su política de uso. Devuelve el JSON o lanza ErrorApi."""
+    global _ultima_consulta_osm
+    with _candado_osm:
+        espera = 1.0 - (time.monotonic() - _ultima_consulta_osm)
+        if espera > 0:
+            time.sleep(espera)
+        try:
+            respuesta = sesion_osm.get(
+                f"{NOMINATIM_URL}{ruta}",
+                params={"format": "jsonv2", **parametros},
+                timeout=(3.05, 10),
+            )
+        except requests.exceptions.Timeout:
+            log.warning("Nominatim no respondió a tiempo: %s", ruta)
+            raise ErrorApi(504, "El servicio de mapas tardó demasiado en responder. Probá de nuevo.")
+        except requests.exceptions.RequestException as error:
+            log.warning("No se pudo conectar con Nominatim (%s): %s", ruta, error)
+            raise ErrorApi(503, "No se pudo conectar con el servicio de mapas.")
+        finally:
+            _ultima_consulta_osm = time.monotonic()
+
+    if respuesta.status_code == 429:
+        raise ErrorApi(503, "El servicio de mapas recibió demasiadas consultas. Esperá unos segundos.")
+    if not respuesta.ok:
+        log.warning("Nominatim devolvió %s en %s", respuesta.status_code, ruta)
+        raise ErrorApi(502, "El servicio de mapas devolvió un error inesperado.")
+    try:
+        return respuesta.json()
+    except ValueError:
+        raise ErrorApi(502, "El servicio de mapas devolvió una respuesta inválida.")
+
+
+def leer_coordenadas():
+    """Lee y valida ?lat=...&lon=... de la URL."""
+    try:
+        lat = float(request.args["lat"])
+        lon = float(request.args["lon"])
+    except (KeyError, ValueError):
+        raise ErrorApi(400, "Faltan coordenadas válidas (lat y lon).")
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise ErrorApi(400, "Las coordenadas están fuera de rango.")
+    return lat, lon
+
+
+def distancia_km(lat1, lon1, lat2, lon2):
+    """Distancia en línea recta sobre la superficie terrestre"""
+    radio_tierra = 6371
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dlat, dlon = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlon / 2) ** 2
+    return 2 * radio_tierra * math.asin(math.sqrt(a))
+
+
+def caja_alrededor(lat, lon, km):
+    """Rectángulo (viewbox) que contiene el círculo de `km` alrededor del punto."""
+    dlat = km / 111.32
+    dlon = km / (111.32 * math.cos(math.radians(lat)))
+    return f"{lon - dlon},{lat + dlat},{lon + dlon},{lat - dlat}"  # izquierda, arriba, derecha, abajo
+
+
+def nombre_de_zona(direccion):
+    """Barrio o localidad a partir del detalle de dirección de Nominatim."""
+    return (
+        direccion.get("suburb")
+        or direccion.get("city_district")
+        or direccion.get("neighbourhood")
+        or direccion.get("town")
+        or direccion.get("city")
+    )
+
+
+def resumir_cine(lugar, lat, lon):
+    extra = lugar.get("extratags") or {}
+    direccion = lugar.get("address") or {}
+    calle = " ".join(filter(None, [direccion.get("road"), direccion.get("house_number")]))
+    web = extra.get("website") or extra.get("contact:website") or extra.get("url")
+    # Solo enlaces web (http/https): los datos de OpenStreetMap los carga la comunidad.
+    if web and not web.startswith(("http://", "https://")):
+        web = f"https://{web}"
+    lat_cine, lon_cine = float(lugar["lat"]), float(lugar["lon"])
+    return {
+        "id": f"{lugar.get('osm_type', '')[:1]}{lugar.get('osm_id')}",
+        "nombre": lugar.get("name") or "Cine sin nombre",
+        "direccion": calle or None,
+        "zona": nombre_de_zona(direccion),
+        "lat": lat_cine,
+        "lon": lon_cine,
+        "distancia_km": round(distancia_km(lat, lon, lat_cine, lon_cine), 2),
+        "web": web,
+        "telefono": extra.get("phone") or extra.get("contact:phone"),
+    }
+
+
+@app.get("/api/cines")
+def cines_cercanos():
+    lat, lon = leer_coordenadas()
+    radio = request.args.get("radio", 5, type=int)
+    if radio not in RADIOS_KM:
+        raise ErrorApi(400, "El radio tiene que ser de 2, 5 o 10 km.")
+
+    # La caché usa coordenadas redondeadas (~100 m) para reutilizar búsquedas cercanas.
+    datos = con_cache(
+        f"cines:{lat:.3f}:{lon:.3f}:{radio}",
+        6 * 3600,
+        lambda: consultar_nominatim("/search", {
+            "amenity": "cinema",
+            "viewbox": caja_alrededor(lat, lon, radio),
+            "bounded": 1,
+            "limit": LIMITE_NOMINATIM,
+            "extratags": 1,
+            "addressdetails": 1,
+        }),
+    )
+    cines = [
+        resumir_cine(lugar, lat, lon)
+        for lugar in datos
+        if lugar.get("category") == "amenity" and lugar.get("type") == "cinema"
+    ]
+    # La búsqueda es por rectángulo: se descartan las esquinas que quedan fuera del radio.
+    cines = sorted((c for c in cines if c["distancia_km"] <= radio), key=lambda c: c["distancia_km"])
+    return jsonify(radio=radio, cines=cines, limite_alcanzado=len(datos) >= LIMITE_NOMINATIM)
+
+
+@app.get("/api/ubicacion")
+def buscar_ubicacion():
+    consulta = (request.args.get("q") or "").strip()
+    if not 3 <= len(consulta) <= 120:
+        raise ErrorApi(400, "Escribí una dirección o barrio de entre 3 y 120 caracteres.")
+    datos = con_cache(
+        f"ubicacion:{consulta.lower()}",
+        24 * 3600,
+        lambda: consultar_nominatim("/search", {"q": consulta, "limit": 5, "countrycodes": "ar"}),
+    )
+    return jsonify(lugares=[
+        {"nombre": d.get("display_name"), "lat": float(d["lat"]), "lon": float(d["lon"])}
+        for d in datos
+    ])
+
+
+@app.get("/api/ubicacion/inversa")
+def ubicacion_inversa():
+    lat, lon = leer_coordenadas()
+    datos = con_cache(
+        f"inversa:{lat:.3f}:{lon:.3f}",
+        24 * 3600,
+        lambda: consultar_nominatim("/reverse", {"lat": lat, "lon": lon, "zoom": 14, "addressdetails": 1}),
+    )
+    direccion = datos.get("address") or {}
+    partes = [nombre_de_zona(direccion), direccion.get("city") or direccion.get("state")]
+    nombre = ", ".join(dict.fromkeys(filter(None, partes)))  # sin repetir (ej: "Rosario, Rosario")
+    return jsonify(nombre=nombre or "tu ubicación")
 
 
 # ============================================

@@ -69,12 +69,12 @@ const TITULOS_ERROR = {
   datos: "Recibimos datos inesperados",
 };
 
-/** Traduce un error (de la API o inesperado) a un bloque de estado. */
-export function crearEstadoError(error, reintentar) {
+export function crearEstadoError(error, reintentar, titulosPropios = {}) {
   const esErrorApi = error?.name === "ErrorApi";
+  const titulos = { ...TITULOS_ERROR, ...titulosPropios };
   return crearEstado({
     tipo: "error",
-    titulo: esErrorApi ? TITULOS_ERROR[error.tipo] ?? TITULOS_ERROR.servidor : TITULOS_ERROR.servidor,
+    titulo: esErrorApi ? titulos[error.tipo] ?? titulos.servidor : titulos.servidor,
     mensaje: esErrorApi ? error.message : "Ocurrió un error inesperado al mostrar la información.",
     detalle: esErrorApi && error.estado ? `Código ${error.estado}` : null,
     textoAccion: reintentar ? "Reintentar" : null,

@@ -96,6 +96,13 @@ export const api = {
     pedir(`/api/descubrir?${new URLSearchParams({ genero: idGenero })}`, opciones),
   buscar: (consulta, opciones) => pedir(`/api/buscar?${new URLSearchParams({ q: consulta })}`, opciones),
   pelicula: (id, opciones) => pedir(`/api/pelicula/${encodeURIComponent(id)}`, opciones),
+
+  // Cines cercanos (datos de OpenStreetMap a través de nuestro servidor)
+  cines: (lat, lon, radio, opciones) =>
+    pedir(`/api/cines?${new URLSearchParams({ lat, lon, radio })}`, opciones),
+  ubicacion: (consulta, opciones) => pedir(`/api/ubicacion?${new URLSearchParams({ q: consulta })}`, opciones),
+  ubicacionInversa: (lat, lon, opciones) =>
+    pedir(`/api/ubicacion/inversa?${new URLSearchParams({ lat, lon })}`, opciones),
 };
 
 /* ---------- Imágenes de TMDB ---------- */
