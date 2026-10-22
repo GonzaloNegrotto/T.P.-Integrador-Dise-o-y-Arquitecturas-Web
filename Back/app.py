@@ -23,6 +23,7 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 from flask import Flask, abort, jsonify, request, send_from_directory, session
+from flask_migrate import Migrate
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from werkzeug.exceptions import HTTPException
@@ -73,6 +74,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # estable para no invalidar sesiones existentes si falta esa variable.
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY") or DATABASE_URL
 db.init_app(app)
+
+# Habilita los comandos `flask db ...` (migrate, upgrade, current) usando la
+# carpeta migrations/ de la raíz, sin importar desde dónde se ejecuten.
+migrate = Migrate(app, db, directory=str(RAIZ / "migrations"))
 
 # Sesión HTTP reutilizable: mantiene la conexión abierta entre consultas
 # (más rápido) y reintenta una vez si TMDB responde 5xx o 429.
