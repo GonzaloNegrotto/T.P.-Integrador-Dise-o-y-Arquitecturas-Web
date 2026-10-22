@@ -7,7 +7,7 @@
 
 import { decorarConPosters } from "./auth-decoracion.js";
 import { iniciarLayout } from "./layout.js";
-import { crearElemento, crearEstado, esperar, mostrarToast } from "./ui.js";
+import { crearElemento, crearEstado, mostrarToast } from "./ui.js";
 import { activarBotonesContrasena, crearValidador, evaluarContrasena, reglas } from "./validacion.js";
 
 const MAX_GENEROS = 5;
@@ -96,7 +96,7 @@ function mostrarExito(datos) {
     ]),
     crearElemento("p", {
       clase: "estado_detalle",
-      texto: "Versión de demostración: los datos todavía no se guardan en un servidor.",
+      texto: "Tu cuenta quedó guardada de forma segura en el servidor.",
     }),
   );
 
@@ -119,8 +119,27 @@ formulario.addEventListener("submit", async (evento) => {
   botonEnviar.classList.add("is-loading");
   botonEnviar.textContent = "Creando cuenta…";
 
-  await esperar(900); // simula la demora de un servidor real
-  mostrarExito(datos);
+  try {
+    const respuesta = await fetch("/api/auth/registro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: datos.get("nombre"),
+        email: datos.get("email"),
+        password: datos.get("password"),
+        nacimiento: datos.get("nacimiento"),
+        generos: datos.getAll("generos"),
+      }),
+    });
+    const resultado = await respuesta.json();
+    if (!respuesta.ok) throw new Error(resultado.error || "No se pudo crear la cuenta.");
+    mostrarExito(datos);
+  } catch (error) {
+    mostrarToast(error.message, { tipo: "error" });
+    botonEnviar.disabled = false;
+    botonEnviar.classList.remove("is-loading");
+    botonEnviar.textContent = "Crear cuenta";
+  }
 });
 
 /* ---------- Inicio ---------- */

@@ -17,15 +17,29 @@ y abrir http://localhost:5000
 import mimetypes
 import os
 import time
+from datetime import date
 from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, abort, jsonify, request, send_from_directory
+from flask import Flask, abort, jsonify, request, send_from_directory, session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from werkzeug.exceptions import HTTPException
+from werkzeug.security import check_password_hash, generate_password_hash
+from sqlalchemy.exc import IntegrityError
 
+
+if __package__:
+    from .conexionDB import DATABASE_URL, db
+    from .modeloDatos import Usuario  # noqa: F401
+else:
+    # Permite ejecutar directamente `python Back/app.py`.
+    from conexionDB import DATABASE_URL, db
+    from modeloDatos import Usuario  # noqa: F401
+
+# Importar los modelos registra sus tablas en el metadata de SQLAlchemy antes
+# de que Flask-Migrate compare el esquema de la base de datos.
 # ============================================
 # Configuración
 # ============================================
@@ -50,6 +64,15 @@ mimetypes.add_type("text/css", ".css")
 
 app = Flask(__name__, static_folder=None)
 log = app.logger
+
+# La conexión se toma exclusivamente del .env y se reutiliza mediante el pool
+# de SQLAlchemy. Flask-Migrate usa esta misma instancia para las migraciones.
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+# Se recomienda definir SECRET_KEY en .env; la URL privada es un respaldo
+# estable para no invalidar sesiones existentes si falta esa variable.
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY") or DATABASE_URL
+db.init_app(app)
 
 # Sesión HTTP reutilizable: mantiene la conexión abierta entre consultas
 # (más rápido) y reintenta una vez si TMDB responde 5xx o 429.
@@ -244,6 +267,94 @@ def listar_peliculas(datos):
 # ============================================
 # API
 # ============================================
+
+def respuesta_usuario(usuario):
+    """Devuelve datos públicos del usuario, sin exponer su contraseña."""
+    return {
+        "id": usuario.id,
+        "nombre": usuario.nombre,
+        "email": usuario.email,
+        "fecha_nacimiento": usuario.fecha_nacimiento.isoformat(),
+        "generos": usuario.generos,
+    }
+
+
+@app.post("/api/auth/registro")
+def registrar_usuario():
+    """Valida y persiste una cuenta con la contraseña hasheada."""
+    datos = request.get_json(silent=True) or {}
+    nombre = str(datos.get("nombre", "")).strip()
+    email = str(datos.get("email", "")).strip().lower()
+    password = str(datos.get("password", ""))
+    nacimiento = str(datos.get("nacimiento", ""))
+    generos = datos.get("generos")
+
+    if not nombre or len(nombre) > 40:
+        raise ErrorApi(400, "El nombre es obligatorio y debe tener hasta 40 caracteres.")
+    if "@" not in email or len(email) > 255:
+        raise ErrorApi(400, "Ingresá un email válido.")
+    if len(password) < 8:
+        raise ErrorApi(400, "La contraseña debe tener al menos 8 caracteres.")
+    try:
+        fecha_nacimiento = date.fromisoformat(nacimiento)
+    except ValueError:
+        raise ErrorApi(400, "La fecha de nacimiento no es válida.")
+    if fecha_nacimiento >= date.today():
+        raise ErrorApi(400, "La fecha de nacimiento debe ser anterior a hoy.")
+    if not isinstance(generos, list) or not 1 <= len(generos) <= 5:
+        raise ErrorApi(400, "Elegí entre 1 y 5 géneros favoritos.")
+
+    usuario = Usuario(
+        nombre=nombre,
+        email=email,
+        password_hash=generate_password_hash(password),
+        fecha_nacimiento=fecha_nacimiento,
+        generos=generos,
+    )
+    db.session.add(usuario)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ErrorApi(409, "Ya existe una cuenta registrada con ese email.")
+
+    return jsonify(usuario=respuesta_usuario(usuario)), 201
+
+
+@app.post("/api/auth/login")
+def iniciar_sesion():
+    """Comprueba credenciales y crea una sesión firmada en el servidor."""
+    datos = request.get_json(silent=True) or {}
+    email = str(datos.get("email", "")).strip().lower()
+    password = str(datos.get("password", ""))
+    usuario = db.session.scalar(db.select(Usuario).where(Usuario.email == email))
+    if usuario is None or not check_password_hash(usuario.password_hash, password):
+        raise ErrorApi(401, "El email o la contraseña no son correctos.")
+
+    session.clear()
+    session["usuario_id"] = usuario.id
+    return jsonify(usuario=respuesta_usuario(usuario))
+
+
+@app.get("/api/auth/me")
+def usuario_actual():
+    """Recupera el usuario asociado a la sesión actual."""
+    usuario_id = session.get("usuario_id")
+    if usuario_id is None:
+        raise ErrorApi(401, "No hay una sesión iniciada.")
+    usuario = db.session.get(Usuario, usuario_id)
+    if usuario is None:
+        session.clear()
+        raise ErrorApi(401, "La sesión ya no es válida.")
+    return jsonify(usuario=respuesta_usuario(usuario))
+
+
+@app.post("/api/auth/logout")
+def cerrar_sesion():
+    """Elimina la sesión actual."""
+    session.clear()
+    return jsonify(mensaje="Sesión cerrada.")
+
 
 @app.get("/api/tendencias")
 def tendencias():

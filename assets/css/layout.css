@@ -154,6 +154,13 @@
   gap: var(--space-2);
 }
 
+.navbar_usuario {
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* Menú responsivo: con 5 links + 2 botones, en tablet ya no entra en una línea.
    El mismo corte (960px) está en layout.js para cerrar el menú al agrandar. */
 @media (max-width: 1080px) {

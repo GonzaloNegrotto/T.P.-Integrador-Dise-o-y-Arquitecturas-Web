@@ -9,6 +9,74 @@ import { mostrarToast } from "./ui.js";
 
 const normalizarRuta = (ruta) => ruta.replace(/index\.html$/, "");
 
+function obtenerAccionesSesion() {
+  return document.querySelector(".navbar_actions");
+}
+
+function mostrarUsuario(usuario) {
+  const acciones = obtenerAccionesSesion();
+  if (!acciones) return;
+
+  const saludo = document.createElement("span");
+  saludo.className = "navbar_usuario";
+  saludo.textContent = `Hola, ${usuario.nombre}`;
+
+  const boton = document.createElement("button");
+  boton.className = "btn btn-outline";
+  boton.type = "button";
+  boton.textContent = "Cerrar sesión";
+  boton.addEventListener("click", cerrarSesion);
+
+  acciones.replaceChildren(saludo, boton);
+}
+
+function mostrarVisitante() {
+  const acciones = obtenerAccionesSesion();
+  if (!acciones) return;
+  const enPagina = window.location.pathname.includes("/pages/");
+
+  const ingresar = document.createElement("a");
+  ingresar.className = "btn btn-outline";
+  ingresar.href = enPagina ? "login.html" : "pages/login.html";
+  ingresar.textContent = "Ingresar";
+
+  const registrar = document.createElement("a");
+  registrar.className = "btn btn-primary";
+  registrar.href = enPagina ? "registro.html" : "pages/registro.html";
+  registrar.textContent = "Registrarse";
+
+  acciones.replaceChildren(ingresar, registrar);
+}
+
+async function cerrarSesion() {
+  try {
+    const respuesta = await fetch("/api/auth/logout", { method: "POST" });
+    if (!respuesta.ok) throw new Error("No se pudo cerrar la sesión.");
+    mostrarVisitante();
+    mostrarToast("Sesión cerrada correctamente.", { tipo: "exito" });
+  } catch (error) {
+    mostrarToast(error.message, { tipo: "error" });
+  }
+}
+
+export async function actualizarSesion() {
+  try {
+    const respuesta = await fetch("/api/auth/me");
+    if (respuesta.status === 401) {
+      mostrarVisitante();
+      return null;
+    }
+    if (!respuesta.ok) throw new Error("No se pudo consultar la sesión.");
+    const datos = await respuesta.json();
+    mostrarUsuario(datos.usuario);
+    return datos.usuario;
+  } catch (error) {
+    // La navegación pública no se rompe si el backend está apagado.
+    console.warn(error.message);
+    return null;
+  }
+}
+
 /** Marca el link de la página actual (clase + aria-current). */
 function marcarPaginaActual(menu) {
   const actual = normalizarRuta(window.location.pathname);
@@ -89,4 +157,5 @@ export function iniciarLayout() {
   iniciarMenu();
   iniciarCabecera();
   iniciarChatbot();
+  actualizarSesion();
 }
