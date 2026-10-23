@@ -870,3 +870,65 @@
     height: 280px;
   }
 }
+
+/* ============================================
+   Página de política de privacidad
+   ============================================ */
+
+.legal {
+  padding-bottom: var(--space-16);
+}
+
+.legal_cabecera {
+  padding-block: var(--space-12) var(--space-8);
+}
+
+.legal_titulo {
+  margin-bottom: var(--space-3);
+}
+
+.legal_intro {
+  max-width: 46rem;
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-md);
+}
+
+/* Índice fijo a la izquierda y texto a la derecha */
+.legal_layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--space-12);
+  align-items: start;
+}
+
+.legal_indice {
+  position: sticky;
+  top: 96px;
+}
+
+.legal_texto {
+  max-width: 48rem;
+}
+
+.legal_texto section {
+  /* Deja lugar para el header fijo al saltar desde el índice */
+  scroll-margin-top: 96px;
+  padding-bottom: var(--space-8);
+}
+
+@media (max-width: 960px) {
+  .legal_layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-8);
+  }
+
+  .legal_indice {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .legal_cabecera {
+    padding-block: var(--space-8) var(--space-6);
+  }
+}

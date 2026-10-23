@@ -1833,3 +1833,241 @@ fieldset.form-field legend {
 .cines_mapa .leaflet-control-attribution a {
   color: var(--color-secondary);
 }
+
+/* ============================================
+   Política de privacidad
+   ============================================ */
+
+.legal_fecha {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+/* Resumen en cuatro tarjetas */
+.legal_resumen {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legal_dato {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-surface);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+}
+
+.legal_dato strong {
+  color: var(--color-text);
+  font-size: var(--fs-base);
+}
+
+.legal_dato-icono {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: var(--space-2);
+  border-radius: 50%;
+  background: rgba(var(--color-secondary-rgb), 0.14);
+  color: var(--color-secondary);
+}
+
+/* Índice */
+.legal_indice-titulo {
+  margin-bottom: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.legal_indice ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--color-border);
+}
+
+.legal_indice a {
+  display: block;
+  margin-left: -1px;
+  padding: var(--space-2) var(--space-4);
+  border-left: 2px solid transparent;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.legal_indice a:hover,
+.legal_indice a:focus-visible {
+  color: var(--color-text);
+}
+
+.legal_indice a.is-activo {
+  border-left-color: var(--color-primary);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* Texto */
+.legal_texto h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-lg);
+}
+
+.legal_num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius);
+  background: rgba(var(--color-primary-rgb), 0.16);
+  color: var(--color-primary-hover);
+  font-size: var(--fs-md);
+}
+
+.legal_texto p,
+.legal_texto li {
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+.legal_texto strong {
+  color: var(--color-text);
+}
+
+.legal_texto li + li {
+  margin-top: var(--space-2);
+}
+
+.legal_tabla {
+  margin-bottom: var(--space-4);
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.legal_tabla table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.legal_tabla th,
+.legal_tabla td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.legal_tabla th {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.legal_tabla td {
+  color: var(--color-text-muted);
+}
+
+.legal_tabla tr:last-child td {
+  border-bottom: 0;
+}
+
+.legal_tabla code {
+  color: var(--color-secondary);
+  font-size: var(--fs-xs);
+  word-break: break-all;
+}
+
+.legal_derechos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+.legal_derechos div {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.legal_derechos dt {
+  margin-bottom: var(--space-1);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.legal_derechos dd {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+/* Leyendas obligatorias de la Ley 25.326 */
+.legal_texto .legal_leyenda {
+  padding: var(--space-4) var(--space-6);
+  border-left: 3px solid var(--color-secondary);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: rgba(var(--color-secondary-rgb), 0.08);
+  color: var(--color-text);
+  font-size: var(--fs-sm);
+}
+
+@media (max-width: 960px) {
+  .legal_resumen {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .legal_resumen,
+  .legal_derechos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .legal_dato {
+    padding: var(--space-4);
+  }
+}
+
+/* Aviso breve de privacidad en el registro */
+.aviso-privacidad {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+
+.aviso-privacidad strong {
+  color: var(--color-text);
+}
+
+/* Aviso de privacidad bajo el buscador de cines */
+.cines_privacidad {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+}

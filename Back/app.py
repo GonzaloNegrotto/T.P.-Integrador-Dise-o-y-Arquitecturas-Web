@@ -75,6 +75,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # Se recomienda definir SECRET_KEY en .env; la URL privada es un respaldo
 # estable para no invalidar sesiones existentes si falta esa variable.
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY") or DATABASE_URL
+# La cookie de sesión no se envía en pedidos iniciados desde otros sitios.
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 db.init_app(app)
 
 # Habilita los comandos `flask db ...` (migrate, upgrade, current) usando la
@@ -286,6 +288,14 @@ def respuesta_usuario(usuario):
     }
 
 
+EDAD_MINIMA = 13
+
+
+def calcular_edad(nacimiento):
+    hoy = date.today()
+    return hoy.year - nacimiento.year - ((hoy.month, hoy.day) < (nacimiento.month, nacimiento.day))
+
+
 @app.post("/api/auth/registro")
 def registrar_usuario():
     """Valida y persiste una cuenta con la contraseña hasheada."""
@@ -296,6 +306,9 @@ def registrar_usuario():
     nacimiento = str(datos.get("nacimiento", ""))
     generos = datos.get("generos")
 
+    # Ley 25.326, art. 5: sin consentimiento expreso no se guardan los datos.
+    if datos.get("acepta_privacidad") is not True:
+        raise ErrorApi(400, "Tenés que aceptar la política de privacidad para crear la cuenta.")
     if not nombre or len(nombre) > 40:
         raise ErrorApi(400, "El nombre es obligatorio y debe tener hasta 40 caracteres.")
     if "@" not in email or len(email) > 255:
@@ -308,6 +321,8 @@ def registrar_usuario():
         raise ErrorApi(400, "La fecha de nacimiento no es válida.")
     if fecha_nacimiento >= date.today():
         raise ErrorApi(400, "La fecha de nacimiento debe ser anterior a hoy.")
+    if calcular_edad(fecha_nacimiento) < EDAD_MINIMA:
+        raise ErrorApi(400, f"Tenés que tener al menos {EDAD_MINIMA} años para registrarte.")
     if not isinstance(generos, list) or not 1 <= len(generos) <= 5:
         raise ErrorApi(400, "Elegí entre 1 y 5 géneros favoritos.")
 

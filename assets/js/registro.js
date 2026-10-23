@@ -54,7 +54,7 @@ const validador = crearValidador(formulario, {
     reglas.maxSeleccionados(MAX_GENEROS, `Podés elegir hasta ${MAX_GENEROS} géneros.`),
   ],
   terminos: [
-    reglas.marcado("Tenés que aceptar los términos para crear la cuenta."),
+    reglas.marcado("Tenés que aceptar la política de privacidad para crear la cuenta."),
   ],
 }, { dependencias: { password: ["confirmacion"] } });
 
@@ -129,6 +129,7 @@ formulario.addEventListener("submit", async (evento) => {
         password: datos.get("password"),
         nacimiento: datos.get("nacimiento"),
         generos: datos.getAll("generos"),
+        acepta_privacidad: datos.get("terminos") === "on",
       }),
     });
     const resultado = await respuesta.json();

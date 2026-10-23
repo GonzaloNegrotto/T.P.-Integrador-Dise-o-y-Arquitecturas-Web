@@ -116,10 +116,17 @@
             </div>
           </fieldset>
 
+          <!-- Aviso de privacidad (Ley 25.326, art. 6): se informa en el momento en que se piden los datos -->
+          <p class="aviso-privacidad" id="aviso-privacidad">
+            <strong>Tus datos, protegidos.</strong> MediaLens usa estos datos solo para crear tu cuenta y recomendarte
+            películas. No los vendemos ni los compartimos, y la contraseña nunca se guarda en texto plano. Podés consultarlos,
+            corregirlos o pedir que los borremos cuando quieras (Ley 25.326).
+          </p>
+
           <div class="form-field" data-campo="terminos">
             <label class="checkbox">
-              <input type="checkbox" id="registro-terminos" name="terminos" required />
-              <span>Acepto los términos y condiciones y la política de privacidad de MediaLens.</span>
+              <input type="checkbox" id="registro-terminos" name="terminos" aria-describedby="aviso-privacidad" required />
+              <span>Leí y acepto la <a href="privacidad.html" target="_blank" rel="noopener">política de privacidad</a> de MediaLens.</span>
             </label>
           </div>
 
@@ -158,6 +165,7 @@
       <div class="footer_bottom">
         <p>&copy; 2026 MediaLens &mdash; TP Integrador, Diseño y Arquitecturas Web.</p>
         <p>Datos e imágenes de <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a>.</p>
+        <p><a href="privacidad.html">Política de privacidad</a></p>
       </div>
     </div>
   </footer>
