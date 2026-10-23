@@ -76,3 +76,18 @@ export function abrirDetallePelicula(id, { titulo, disparador } = {}) {
   dialogo.showModal();
   cargar();
 }
+
+/**
+ * Delegación: cualquier tarjeta de película de la página (con data-pelicula-id)
+ * abre el detalle, aunque se haya creado después.
+ */
+export function escucharTarjetas() {
+  document.addEventListener("click", (evento) => {
+    const enlace = evento.target.closest("[data-pelicula-id]");
+    if (!enlace) return;
+    // Ctrl/⌘ + clic o clic del medio: dejamos que abra TMDB en otra pestaña.
+    if (evento.ctrlKey || evento.metaKey || evento.shiftKey || evento.button !== 0) return;
+    evento.preventDefault();
+    abrirDetallePelicula(enlace.dataset.peliculaId, { titulo: enlace.dataset.titulo, disparador: enlace });
+  });
+}

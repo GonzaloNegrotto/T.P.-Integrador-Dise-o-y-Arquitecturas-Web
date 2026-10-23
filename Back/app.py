@@ -30,16 +30,17 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 
 if __package__:
     from .conexionDB import DATABASE_URL, db
-    from .modeloDatos import Usuario  # noqa: F401
+    from .modeloDatos import Favorito, Usuario
 else:
     # Permite ejecutar directamente `python Back/app.py`.
     from conexionDB import DATABASE_URL, db
-    from modeloDatos import Usuario  # noqa: F401
+    from modeloDatos import Favorito, Usuario
 
 # Importar los modelos registra sus tablas en el metadata de SQLAlchemy antes
 # de que Flask-Migrate compare el esquema de la base de datos.
@@ -358,9 +359,11 @@ def iniciar_sesion():
     return jsonify(usuario=respuesta_usuario(usuario))
 
 
-@app.get("/api/auth/me")
-def usuario_actual():
-    """Recupera el usuario asociado a la sesión actual."""
+def usuario_de_la_sesion():
+    """Usuario con la sesión iniciada. Si no hay ninguno, corta con 401.
+
+    La usan todas las rutas que necesitan una cuenta.
+    """
     usuario_id = session.get("usuario_id")
     if usuario_id is None:
         raise ErrorApi(401, "No hay una sesión iniciada.")
@@ -368,7 +371,13 @@ def usuario_actual():
     if usuario is None:
         session.clear()
         raise ErrorApi(401, "La sesión ya no es válida.")
-    return jsonify(usuario=respuesta_usuario(usuario))
+    return usuario
+
+
+@app.get("/api/auth/me")
+def usuario_actual():
+    """Recupera el usuario asociado a la sesión actual."""
+    return jsonify(usuario=respuesta_usuario(usuario_de_la_sesion()))
 
 
 @app.post("/api/auth/logout")
@@ -488,6 +497,114 @@ def pelicula(id_pelicula):
             for c in creditos.get("cast", [])[:6]
         ],
     )
+
+
+# ============================================
+# Mis favoritas
+# Cada usuario guarda películas en su lista. El navegador solo manda el id:
+# los datos se toman de TMDB en el servidor, así no se pueden guardar
+# títulos o imágenes inventados.
+# ============================================
+
+LIMITE_FAVORITAS = 200
+
+
+def resumir_favorito(favorito):
+    """Mismo formato que resumir_pelicula(), para reutilizar las tarjetas del front."""
+    return {
+        "id": favorito.pelicula_id,
+        "titulo": favorito.titulo,
+        "anio": favorito.anio,
+        "puntaje": favorito.puntaje,
+        "votos": favorito.votos,
+        "poster": favorito.poster,
+        "generos": favorito.generos,
+        "agregada_en": favorito.agregado_en.isoformat() if favorito.agregado_en else None,
+    }
+
+
+def buscar_favorito(usuario, id_pelicula):
+    return db.session.scalar(
+        db.select(Favorito).where(
+            Favorito.usuario_id == usuario.id,
+            Favorito.pelicula_id == id_pelicula,
+        )
+    )
+
+
+@app.get("/api/favoritos")
+def listar_favoritos():
+    """Favoritas del usuario, de la más reciente a la más antigua."""
+    usuario = usuario_de_la_sesion()
+    favoritos = db.session.scalars(
+        db.select(Favorito)
+        .where(Favorito.usuario_id == usuario.id)
+        .order_by(Favorito.agregado_en.desc(), Favorito.id.desc())
+    ).all()
+    return jsonify(favoritas=[resumir_favorito(f) for f in favoritos])
+
+
+@app.post("/api/favoritos")
+def agregar_favorito():
+    usuario = usuario_de_la_sesion()
+    datos = request.get_json(silent=True) or {}
+    id_pelicula = datos.get("pelicula_id")
+    # bool es subclase de int en Python: se descarta explícitamente.
+    if not isinstance(id_pelicula, int) or isinstance(id_pelicula, bool) or id_pelicula <= 0:
+        raise ErrorApi(400, "Falta indicar una película válida.")
+
+    # Si ya estaba guardada, se responde igual que si se acabara de guardar.
+    existente = buscar_favorito(usuario, id_pelicula)
+    if existente:
+        return jsonify(favorita=resumir_favorito(existente)), 200
+
+    cantidad = db.session.scalar(
+        db.select(func.count()).select_from(Favorito).where(Favorito.usuario_id == usuario.id)
+    )
+    if cantidad >= LIMITE_FAVORITAS:
+        raise ErrorApi(409, f"Llegaste al máximo de {LIMITE_FAVORITAS} favoritas. Quitá alguna para sumar otra.")
+
+    # Misma clave de caché que /api/pelicula: si ya se abrió el detalle, no se vuelve a pedir.
+    pelicula = con_cache(
+        f"pelicula:{id_pelicula}",
+        3600,
+        lambda: consultar_tmdb(f"/movie/{id_pelicula}", {"append_to_response": "credits"}),
+    )
+    if es_contenido_adulto(pelicula):
+        raise ErrorApi(404, "No encontramos lo que buscabas.")
+
+    fecha = pelicula.get("release_date") or ""
+    favorito = Favorito(
+        usuario_id=usuario.id,
+        pelicula_id=id_pelicula,
+        titulo=(pelicula.get("title") or pelicula.get("original_title") or "Sin título")[:255],
+        poster=pelicula.get("poster_path"),
+        anio=fecha[:4] or None,
+        puntaje=round(pelicula.get("vote_average") or 0, 1),
+        votos=pelicula.get("vote_count") or 0,
+        generos=[g["name"] for g in pelicula.get("genres", [])],
+    )
+    db.session.add(favorito)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Dos clics casi simultáneos: el otro pedido ya la guardó.
+        db.session.rollback()
+        return jsonify(favorita=resumir_favorito(buscar_favorito(usuario, id_pelicula))), 200
+
+    return jsonify(favorita=resumir_favorito(favorito)), 201
+
+
+@app.delete("/api/favoritos/<int:id_pelicula>")
+def quitar_favorito(id_pelicula):
+    usuario = usuario_de_la_sesion()
+    favorito = buscar_favorito(usuario, id_pelicula)
+    # Quitar una película que ya no estaba no es un error: el resultado es el mismo.
+    if favorito:
+        db.session.delete(favorito)
+        db.session.commit()
+    return jsonify(pelicula_id=id_pelicula, eliminada=favorito is not None)
+
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org"
 RADIOS_KM = (2, 5, 10)

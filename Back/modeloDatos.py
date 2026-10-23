@@ -5,7 +5,7 @@ Flask-Migrate. La contraseña nunca se guarda en texto plano: se persiste
 únicamente su hash.
 """
 
-from sqlalchemy import Date, DateTime, JSON, String, func
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, JSON, String, UniqueConstraint, func
 
 if __package__:
     from .conexionDB import db
@@ -33,3 +33,42 @@ class Usuario(db.Model):
 
     def __repr__(self):
         return f"<Usuario {self.email}>"
+
+
+class Favorito(db.Model):
+    """Película que un usuario guardó en "Mis favoritas".
+
+    Además del id de TMDB se guarda una copia de los datos que muestra la
+    tarjeta (título, póster, año, puntaje y géneros), así la lista se arma
+    sin volver a consultar TMDB por cada película.
+    """
+
+    __tablename__ = "favoritos"
+    __table_args__ = (
+        # Una misma película no puede estar dos veces en la lista de un usuario.
+        UniqueConstraint("usuario_id", "pelicula_id", name="uq_favoritos_usuario_pelicula"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    # Si se borra la cuenta, se borran también sus favoritas.
+    usuario_id = db.Column(
+        Integer,
+        ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    pelicula_id = db.Column(Integer, nullable=False)
+    titulo = db.Column(String(255), nullable=False)
+    poster = db.Column(String(100))
+    anio = db.Column(String(4))
+    puntaje = db.Column(Float, nullable=False, default=0)
+    votos = db.Column(Integer, nullable=False, default=0)
+    generos = db.Column(JSON, nullable=False, default=list)
+    agregado_en = db.Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    def __repr__(self):
+        return f"<Favorito usuario={self.usuario_id} pelicula={self.pelicula_id}>"

@@ -2,7 +2,8 @@
    layout.js
    Comportamiento común a todas las páginas:
    menú responsive, link activo, cabecera al
-   hacer scroll y botón del chatbot.
+   hacer scroll, sesión del usuario y botón del
+   chatbot.
    ============================================ */
 
 import { mostrarToast } from "./ui.js";
@@ -13,7 +14,38 @@ function obtenerAccionesSesion() {
   return document.querySelector(".navbar_actions");
 }
 
+/**
+ * Avisa a la página que cambió la sesión (inició, cerró o se consultó).
+ * Las páginas que dependen de la cuenta, como Mis favoritas, escuchan este evento.
+ */
+function avisarCambioDeSesion(usuario) {
+  document.dispatchEvent(new CustomEvent("sesion:cambio", { detail: { usuario } }));
+}
+
+/** El link "Mis favoritas" del menú solo existe con la sesión iniciada. */
+function mostrarLinkFavoritas(visible) {
+  const lista = document.querySelector(".navbar_links");
+  if (!lista) return;
+  const existente = lista.querySelector("[data-link-favoritas]");
+  if (!visible) {
+    existente?.remove();
+    return;
+  }
+  if (existente) return;
+
+  const enPagina = window.location.pathname.includes("/pages/");
+  const link = document.createElement("a");
+  link.href = enPagina ? "favoritas.html" : "pages/favoritas.html";
+  link.textContent = "Mis favoritas";
+  const item = document.createElement("li");
+  item.dataset.linkFavoritas = "";
+  item.append(link);
+  lista.append(item);
+  marcarPaginaActual(lista);
+}
+
 function mostrarUsuario(usuario) {
+  mostrarLinkFavoritas(true);
   const acciones = obtenerAccionesSesion();
   if (!acciones) return;
 
@@ -31,6 +63,7 @@ function mostrarUsuario(usuario) {
 }
 
 function mostrarVisitante() {
+  mostrarLinkFavoritas(false);
   const acciones = obtenerAccionesSesion();
   if (!acciones) return;
   const enPagina = window.location.pathname.includes("/pages/");
@@ -53,6 +86,7 @@ async function cerrarSesion() {
     const respuesta = await fetch("/api/auth/logout", { method: "POST" });
     if (!respuesta.ok) throw new Error("No se pudo cerrar la sesión.");
     mostrarVisitante();
+    avisarCambioDeSesion(null);
     mostrarToast("Sesión cerrada correctamente.", { tipo: "exito" });
   } catch (error) {
     mostrarToast(error.message, { tipo: "error" });
@@ -64,21 +98,25 @@ export async function actualizarSesion() {
     const respuesta = await fetch("/api/auth/me");
     if (respuesta.status === 401) {
       mostrarVisitante();
+      avisarCambioDeSesion(null);
       return null;
     }
     if (!respuesta.ok) throw new Error("No se pudo consultar la sesión.");
     const datos = await respuesta.json();
     mostrarUsuario(datos.usuario);
+    avisarCambioDeSesion(datos.usuario);
     return datos.usuario;
   } catch (error) {
     // La navegación pública no se rompe si el backend está apagado.
     console.warn(error.message);
+    avisarCambioDeSesion(null);
     return null;
   }
 }
 
 /** Marca el link de la página actual (clase + aria-current). */
 function marcarPaginaActual(menu) {
+  if (!menu) return;
   const actual = normalizarRuta(window.location.pathname);
   for (const link of menu.querySelectorAll(".navbar_links a")) {
     const esActual = normalizarRuta(new URL(link.href).pathname) === actual;
@@ -153,9 +191,10 @@ function iniciarChatbot() {
   });
 }
 
+/** Devuelve una promesa con el usuario de la sesión (o null si es un visitante). */
 export function iniciarLayout() {
   iniciarMenu();
   iniciarCabecera();
   iniciarChatbot();
-  actualizarSesion();
+  return actualizarSesion();
 }

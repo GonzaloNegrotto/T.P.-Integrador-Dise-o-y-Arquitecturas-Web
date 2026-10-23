@@ -49,6 +49,18 @@ function guardarEmailRecordado(email) {
   }
 }
 
+/* ---------- Página a la que se vuelve ---------- */
+
+/**
+ * Si se llegó al login desde otra página (ej: al tocar el ♥ sin sesión),
+ * la URL trae ?volver=/pages/favoritas.html. Solo se aceptan páginas de
+ * este mismo sitio, para que nadie pueda armar un link que redirija afuera.
+ */
+function paginaDeVuelta() {
+  const volver = new URLSearchParams(window.location.search).get("volver");
+  return volver && /^\/(index\.html)?$|^\/pages\/[a-z-]+\.html$/.test(volver) ? volver : null;
+}
+
 /* ---------- Envío ---------- */
 
 formulario.addEventListener("submit", async (evento) => {
@@ -71,6 +83,7 @@ formulario.addEventListener("submit", async (evento) => {
     if (!respuesta.ok) throw new Error(resultado.error || "No se pudo iniciar sesión.");
     await actualizarSesion();
 
+    const volver = paginaDeVuelta();
     const exito = crearEstado({
       tipo: "exito",
       titulo: `¡Hola, ${resultado.usuario.nombre}!`,
@@ -78,7 +91,11 @@ formulario.addEventListener("submit", async (evento) => {
     });
     exito.append(
       crearElemento("div", { clase: "estado_acciones" }, [
-        crearElemento("a", { clase: "btn btn-primary", texto: "Ir al inicio", atributos: { href: "../index.html" } }),
+        crearElemento("a", {
+          clase: "btn btn-primary",
+          texto: volver ? "Continuar" : "Ir al inicio",
+          atributos: { href: volver ?? "../index.html" },
+        }),
       ]),
     );
     tarjeta.replaceChildren(exito);

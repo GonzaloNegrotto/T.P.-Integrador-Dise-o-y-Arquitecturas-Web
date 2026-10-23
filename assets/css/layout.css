@@ -932,3 +932,35 @@
     padding-block: var(--space-8) var(--space-6);
   }
 }
+
+/* ============================================
+   Página Mis favoritas
+   ============================================ */
+
+.favoritas {
+  padding-bottom: var(--space-16);
+}
+
+.favoritas_cabecera {
+  padding-block: var(--space-12) var(--space-6);
+}
+
+.favoritas_titulo {
+  margin-bottom: var(--space-3);
+}
+
+.favoritas_intro {
+  max-width: 46rem;
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+.favoritas_lista .section_status {
+  margin: 0 0 var(--space-4);
+}
+
+@media (max-width: 560px) {
+  .favoritas_cabecera {
+    padding-block: var(--space-8) var(--space-4);
+  }
+}

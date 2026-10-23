@@ -7,6 +7,7 @@
    ============================================ */
 
 import { srcsetImagen, urlImagen } from "./api.js";
+import { pintarBotonFavorita } from "./favoritas.js";
 import { crearElemento } from "./ui.js";
 
 const formatoPuntaje = new Intl.NumberFormat("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -77,6 +78,25 @@ function crearMeta(partes) {
   );
 }
 
+/* ---------- Botón de favorita (corazón) ---------- */
+
+/**
+ * Corazón para guardar o quitar la película de Mis favoritas.
+ * El clic lo maneja favoritas.js por delegación.
+ */
+export function crearBotonFavorita(pelicula, { conTexto = false } = {}) {
+  const boton = crearElemento("button", {
+    clase: conTexto ? "btn btn-outline fav fav--detalle" : "fav fav--tarjeta",
+    atributos: { type: "button" },
+    datos: { favoritaId: pelicula.id, titulo: pelicula.titulo },
+  }, [
+    crearElemento("span", { clase: "fav_icono", atributos: { "aria-hidden": "true" } }),
+    conTexto && crearElemento("span", { clase: "fav_texto" }),
+  ]);
+  pintarBotonFavorita(boton);
+  return boton;
+}
+
 /* ---------- Tarjeta de película ---------- */
 
 export function crearTarjetaPelicula(pelicula) {
@@ -103,7 +123,8 @@ export function crearTarjetaPelicula(pelicula) {
     ]),
   ]);
 
-  return crearElemento("article", { clase: "card" }, [enlace]);
+  // El corazón va fuera del enlace: un botón no puede estar dentro de un <a>.
+  return crearElemento("article", { clase: "card" }, [enlace, crearBotonFavorita(pelicula)]);
 }
 
 export function crearTarjetaSkeleton() {
@@ -247,6 +268,7 @@ export function crearDetallePelicula(detalle) {
     ]),
     reparto,
     crearElemento("div", { clase: "detalle_acciones" }, [
+      crearBotonFavorita(detalle, { conTexto: true }),
       crearElemento("a", {
         clase: "btn btn-outline",
         texto: "Ver ficha en TMDB ↗",

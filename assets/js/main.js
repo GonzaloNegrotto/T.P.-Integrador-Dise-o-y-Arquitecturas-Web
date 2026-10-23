@@ -7,8 +7,9 @@
    ============================================ */
 
 import { api, srcsetImagen, urlImagen } from "./api.js";
+import { iniciarFavoritas } from "./favoritas.js";
 import { iniciarLayout } from "./layout.js";
-import { abrirDetallePelicula } from "./modal.js";
+import { escucharTarjetas } from "./modal.js";
 import {
   crearDestacada,
   crearTarjetaPelicula,
@@ -400,21 +401,15 @@ function registrarEventos() {
     renderizarGeneros();
   });
 
-  // Delegación: cualquier tarjeta de película (de cualquier sección) abre el detalle.
-  document.addEventListener("click", (evento) => {
-    const enlace = evento.target.closest("[data-pelicula-id]");
-    if (!enlace) return;
-    // Ctrl/⌘ + clic o clic del medio: dejamos que abra TMDB en otra pestaña.
-    if (evento.ctrlKey || evento.metaKey || evento.shiftKey || evento.button !== 0) return;
-    evento.preventDefault();
-    abrirDetallePelicula(enlace.dataset.peliculaId, { titulo: enlace.dataset.titulo, disparador: enlace });
-  });
+  // Cualquier tarjeta de película (de cualquier sección) abre el detalle.
+  escucharTarjetas();
 }
 
 /* ============================================
    Inicio
    ============================================ */
 
+iniciarFavoritas();
 iniciarLayout();
 registrarEventos();
 cargarTendencias();

@@ -64,6 +64,7 @@ const TITULOS_ERROR = {
   tiempo: "La respuesta está tardando demasiado",
   "no-encontrado": "No encontramos lo que buscabas",
   solicitud: "No pudimos procesar el pedido",
+  sesion: "Necesitás iniciar sesión",
   proveedor: "El servicio de películas no está respondiendo",
   servidor: "Algo salió mal",
   datos: "Recibimos datos inesperados",
@@ -93,15 +94,26 @@ function contenedorToasts() {
   return contenedor;
 }
 
-/** Muestra un aviso temporal que se elimina solo (o al cerrarlo). */
-export function mostrarToast(mensaje, { tipo = "info", duracion = 4500 } = {}) {
+/**
+ * Muestra un aviso temporal que se elimina solo (o al cerrarlo).
+ * accion (opcional): { texto, href } para un enlace o { texto, alAccionar } para un botón.
+ */
+export function mostrarToast(mensaje, { tipo = "info", duracion = 4500, accion } = {}) {
   const cerrar = crearElemento("button", {
     clase: "toast_cerrar",
     texto: "✕",
     atributos: { type: "button", "aria-label": "Cerrar aviso" },
   });
+  const boton = accion
+    ? crearElemento(accion.href ? "a" : "button", {
+        clase: "toast_accion",
+        texto: accion.texto,
+        atributos: accion.href ? { href: accion.href } : { type: "button" },
+      })
+    : null;
   const toast = crearElemento("div", { clase: `toast toast--${tipo}` }, [
     crearElemento("p", { texto: mensaje }),
+    boton,
     cerrar,
   ]);
 
@@ -113,6 +125,12 @@ export function mostrarToast(mensaje, { tipo = "info", duracion = 4500 } = {}) {
   };
 
   cerrar.addEventListener("click", quitar);
+  if (accion?.alAccionar) {
+    boton.addEventListener("click", () => {
+      quitar();
+      accion.alAccionar();
+    });
+  }
   temporizador = setTimeout(quitar, duracion);
   contenedorToasts().append(toast);
 }

@@ -12,7 +12,7 @@ const URL_IMAGENES = "https://image.tmdb.org/t/p/";
 
 /**
  * Error con información útil para decidir qué mostrar.
- * tipo: "red" | "tiempo" | "solicitud" | "no-encontrado" | "proveedor" | "servidor" | "datos"
+ * tipo: "red" | "tiempo" | "solicitud" | "sesion" | "no-encontrado" | "proveedor" | "servidor" | "datos"
  */
 export class ErrorApi extends Error {
   constructor(mensaje, { tipo = "servidor", estado = null } = {}) {
@@ -25,6 +25,7 @@ export class ErrorApi extends Error {
 
 const MENSAJES_POR_ESTADO = {
   400: "El pedido no es válido.",
+  401: "Necesitás iniciar sesión.",
   404: "No encontramos lo que buscabas.",
   500: "El servidor tuvo un problema interno.",
   502: "El proveedor de datos respondió con un error.",
@@ -33,6 +34,7 @@ const MENSAJES_POR_ESTADO = {
 };
 
 function tipoSegunEstado(estado) {
+  if (estado === 401) return "sesion";
   if (estado === 404) return "no-encontrado";
   if (estado >= 400 && estado < 500) return "solicitud";
   if (estado === 504) return "tiempo";
@@ -41,18 +43,26 @@ function tipoSegunEstado(estado) {
 }
 
 /**
- * GET a nuestro backend con manejo de errores completo.
+ * Pedido a nuestro backend con manejo de errores completo.
+ * - Por defecto es GET; para guardar o borrar se indica el método y el cuerpo.
  * - Corta a los 15 s (timeout).
  * - Acepta una señal para cancelar pedidos viejos (ej: si el usuario
  *   cambia de pestaña antes de que termine el anterior).
  */
-async function pedir(ruta, { signal } = {}) {
+async function pedir(ruta, { signal, metodo = "GET", cuerpo } = {}) {
   const limite = AbortSignal.timeout(TIEMPO_MAXIMO_MS);
   const senal = signal ? AbortSignal.any([signal, limite]) : limite;
+  const headers = { Accept: "application/json" };
+  if (cuerpo !== undefined) headers["Content-Type"] = "application/json";
 
   let respuesta;
   try {
-    respuesta = await fetch(ruta, { signal: senal, headers: { Accept: "application/json" } });
+    respuesta = await fetch(ruta, {
+      method: metodo,
+      signal: senal,
+      headers,
+      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+    });
   } catch (error) {
     // Lo cancelamos nosotros a propósito: no es una falla, se propaga tal cual.
     if (error.name === "AbortError") throw error;
@@ -103,6 +113,13 @@ export const api = {
   ubicacion: (consulta, opciones) => pedir(`/api/ubicacion?${new URLSearchParams({ q: consulta })}`, opciones),
   ubicacionInversa: (lat, lon, opciones) =>
     pedir(`/api/ubicacion/inversa?${new URLSearchParams({ lat, lon })}`, opciones),
+
+  // Mis favoritas (requieren sesión iniciada)
+  favoritas: (opciones) => pedir("/api/favoritos", opciones),
+  agregarFavorita: (idPelicula) =>
+    pedir("/api/favoritos", { metodo: "POST", cuerpo: { pelicula_id: Number(idPelicula) } }),
+  quitarFavorita: (idPelicula) =>
+    pedir(`/api/favoritos/${encodeURIComponent(idPelicula)}`, { metodo: "DELETE" }),
 };
 
 /* ---------- Imágenes de TMDB ---------- */
