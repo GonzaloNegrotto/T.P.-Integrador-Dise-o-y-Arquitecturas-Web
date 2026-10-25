@@ -308,3 +308,65 @@ export function crearDetalleSkeleton() {
   );
   return fragmento;
 }
+
+/* ---------- Fila de ranking (página Rankings) ---------- */
+
+const PUESTOS_PODIO = 3;
+
+/**
+ * Una fila del ranking: puesto, póster, título y la cifra con la que se ordena
+ * (puntaje o popularidad). Los tres primeros puestos se destacan en dorado.
+ */
+export function crearFilaRanking(pelicula, posicion, criterio = "puntaje") {
+  const porPuntaje = criterio === "puntaje";
+  const puntaje = formatoPuntaje.format(pelicula.puntaje);
+  const popularidad = formatoNumero.format(pelicula.popularidad ?? 0);
+
+  const valor = crearElemento("div", { clase: "ranking-fila_valor" }, [
+    crearElemento("span", {
+      clase: "ranking-fila_cifra",
+      texto: porPuntaje ? puntaje : popularidad,
+      atributos: { "aria-label": porPuntaje ? `Puntaje ${puntaje} de 10` : `Popularidad ${popularidad}` },
+    }),
+    crearElemento("span", {
+      clase: "ranking-fila_detalle",
+      texto: porPuntaje ? `${formatoNumero.format(pelicula.votos)} votos` : `★ ${puntaje}`,
+    }),
+  ]);
+
+  // Es un enlace real a TMDB; escucharTarjetas() lo intercepta para abrir el detalle.
+  const enlace = crearElemento("a", {
+    clase: "ranking-fila_link",
+    atributos: { href: urlTmdb(pelicula.id) },
+    datos: { peliculaId: pelicula.id, titulo: pelicula.titulo },
+  }, [
+    crearPoster(pelicula, { clase: "ranking-fila_poster", sizes: "64px", tamanos: ["w92", "w185"] }),
+    crearElemento("div", { clase: "ranking-fila_info" }, [
+      crearElemento("h3", { clase: "ranking-fila_titulo", texto: pelicula.titulo }),
+      crearMeta([pelicula.generos[0], pelicula.anio]),
+    ]),
+    valor,
+  ]);
+
+  return crearElemento("li", {
+    clase: posicion <= PUESTOS_PODIO ? "ranking-fila ranking-fila--podio" : "ranking-fila",
+  }, [
+    // El número es decorativo: la lista ordenada ya comunica el puesto.
+    crearElemento("span", { clase: "ranking-fila_pos", texto: posicion, atributos: { "aria-hidden": "true" } }),
+    enlace,
+    crearBotonFavorita(pelicula),
+  ]);
+}
+
+export function crearFilaRankingSkeleton(posicion) {
+  return crearElemento("li", { clase: "ranking-fila ranking-fila--skeleton", atributos: { "aria-hidden": "true" } }, [
+    crearElemento("span", { clase: "ranking-fila_pos", texto: posicion }),
+    crearElemento("div", { clase: "ranking-fila_link" }, [
+      crearElemento("div", { clase: "ranking-fila_poster poster skeleton" }),
+      crearElemento("div", { clase: "ranking-fila_info" }, [
+        crearElemento("span", { clase: "skeleton skeleton-line" }),
+        crearElemento("span", { clase: "skeleton skeleton-line skeleton-line--corta" }),
+      ]),
+    ]),
+  ]);
+}

@@ -964,3 +964,36 @@
     padding-block: var(--space-8) var(--space-4);
   }
 }
+
+/* ============================================
+   Páginas Rankings y Recomendaciones
+   ============================================ */
+
+.ranking,
+.recs {
+  padding-bottom: var(--space-16);
+}
+
+.ranking_cabecera,
+.recs_cabecera {
+  padding-block: var(--space-12) var(--space-6);
+}
+
+.ranking_titulo,
+.recs_titulo {
+  margin-bottom: var(--space-3);
+}
+
+.ranking_intro,
+.recs_intro {
+  max-width: 46rem;
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+@media (max-width: 560px) {
+  .ranking_cabecera,
+  .recs_cabecera {
+    padding-block: var(--space-8) var(--space-4);
+  }
+}
