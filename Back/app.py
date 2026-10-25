@@ -19,7 +19,9 @@ import mimetypes
 import os
 import threading
 import time
+import unicodedata
 from datetime import date
+from itertools import zip_longest
 from pathlib import Path
 
 import requests
@@ -31,7 +33,7 @@ from urllib3.util.retry import Retry
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 
 if __package__:
@@ -773,6 +775,284 @@ def ubicacion_inversa():
     partes = [nombre_de_zona(direccion), direccion.get("city") or direccion.get("state")]
     nombre = ", ".join(dict.fromkeys(filter(None, partes)))  # sin repetir (ej: "Rosario, Rosario")
     return jsonify(nombre=nombre or "tu ubicación")
+
+
+# ============================================
+# Rankings
+# Películas ordenadas por puntaje o por popularidad, con filtros por género,
+# año e idioma (RF02 y RF05). Los datos salen de /discover/movie de TMDB.
+# ============================================
+
+CRITERIOS_RANKING = ("puntaje", "popularidad")
+# Idiomas originales que ofrece el filtro (códigos ISO 639-1, como los usa TMDB).
+IDIOMAS_RANKING = ("es", "en", "fr", "it", "de", "pt", "ja", "ko")
+ANIO_MINIMO = 1900
+PELICULAS_POR_PAGINA = 20  # tamaño de página de TMDB
+PAGINAS_MAXIMAS = 5  # el ranking llega hasta el puesto 100
+
+# Mínimo de votos para entrar al ranking por puntaje, según cuántos filtros hay
+# activos. Con pocos votos un 9,5 no significa nada; al filtrar se baja el piso
+# para que sigan quedando resultados.
+MINIMO_VOTOS_PUNTAJE = {0: 10000, 1: 2000, 2: 500, 3: 200}
+MINIMO_VOTOS_POPULARIDAD = 100
+
+
+def leer_entero_opcional(nombre, minimo, maximo, mensaje):
+    """Lee un entero opcional de la URL. Si el valor es inválido, corta con 400."""
+    bruto = (request.args.get(nombre) or "").strip()
+    if not bruto:
+        return None
+    try:
+        valor = int(bruto)
+    except ValueError:
+        raise ErrorApi(400, mensaje)
+    if not minimo <= valor <= maximo:
+        raise ErrorApi(400, mensaje)
+    return valor
+
+
+def leer_filtros_ranking():
+    """Valida ?criterio=&genero=&anio=&idioma=&pagina= y los devuelve en ese orden."""
+    criterio = request.args.get("criterio", "puntaje")
+    if criterio not in CRITERIOS_RANKING:
+        raise ErrorApi(400, "El criterio tiene que ser 'puntaje' o 'popularidad'.")
+
+    genero = leer_entero_opcional("genero", 1, 999999, "El género no es válido.")
+    if genero is not None:
+        conocidos = mapa_generos()  # vacío si TMDB no responde: ahí no se puede comprobar
+        if conocidos and genero not in conocidos:
+            raise ErrorApi(400, "El género no es válido.")
+
+    anio_actual = date.today().year
+    anio = leer_entero_opcional(
+        "anio", ANIO_MINIMO, anio_actual, f"El año tiene que estar entre {ANIO_MINIMO} y {anio_actual}."
+    )
+
+    idioma = (request.args.get("idioma") or "").strip().lower() or None
+    if idioma is not None and idioma not in IDIOMAS_RANKING:
+        raise ErrorApi(400, "El idioma no es válido.")
+
+    pagina = leer_entero_opcional(
+        "pagina", 1, PAGINAS_MAXIMAS, f"La página tiene que estar entre 1 y {PAGINAS_MAXIMAS}."
+    ) or 1
+    return criterio, genero, anio, idioma, pagina
+
+
+def parametros_ranking(criterio, genero, anio, idioma, pagina):
+    """Parámetros de /discover/movie para el ranking. Devuelve (parametros, minimo_votos)."""
+    parametros = {"include_adult": "false", "page": pagina}
+    if genero:
+        parametros["with_genres"] = genero
+    if anio:
+        parametros["primary_release_year"] = anio
+    if idioma:
+        parametros["with_original_language"] = idioma
+
+    if criterio == "puntaje":
+        filtros = sum(valor is not None for valor in (genero, anio, idioma))
+        minimo_votos = MINIMO_VOTOS_PUNTAJE[filtros]
+        if anio and anio >= date.today().year - 1:
+            minimo_votos = min(minimo_votos, 300)  # los estrenos recientes juntaron pocos votos
+        parametros["sort_by"] = "vote_average.desc"
+    else:
+        minimo_votos = MINIMO_VOTOS_POPULARIDAD
+        parametros["sort_by"] = "popularity.desc"
+    parametros["vote_count.gte"] = minimo_votos
+    return parametros, minimo_votos
+
+
+@app.get("/api/ranking")
+def ranking():
+    criterio, genero, anio, idioma, pagina = leer_filtros_ranking()
+    parametros, minimo_votos = parametros_ranking(criterio, genero, anio, idioma, pagina)
+
+    clave = f"ranking:{criterio}:{genero}:{anio}:{idioma}:{pagina}"
+    segundos = 3600 if criterio == "puntaje" else 900  # la popularidad cambia más rápido
+    datos = con_cache(clave, segundos, lambda: consultar_tmdb("/discover/movie", parametros))
+
+    nombres = mapa_generos()
+    resultados = []
+    for crudo in datos.get("results", []):
+        if es_contenido_adulto(crudo):
+            continue
+        pelicula = resumir_pelicula(crudo, nombres)
+        pelicula["popularidad"] = round(crudo.get("popularity") or 0)
+        resultados.append(pelicula)
+
+    return jsonify(
+        criterio=criterio,
+        pagina=pagina,
+        total_paginas=min(datos.get("total_pages") or 1, PAGINAS_MAXIMAS),
+        total=min(datos.get("total_results") or 0, PAGINAS_MAXIMAS * PELICULAS_POR_PAGINA),
+        minimo_votos=minimo_votos,
+        resultados=resultados,
+    )
+
+
+# ============================================
+# Recomendaciones
+# Caso de uso CU03 (RF07). Para el usuario con sesión iniciada se arman filas
+# de películas a partir de dos cosas:
+#   - los géneros que eligió al registrarse y los de sus favoritas;
+#   - las películas parecidas a sus últimas favoritas (/recommendations de TMDB).
+# Nunca se recomienda algo que ya guardó, ni se repite una película entre filas.
+# ============================================
+
+# Géneros del formulario de registro (pages/registro.html) con su id en TMDB.
+# Las claves están normalizadas (sin tildes y en minúsculas).
+IDS_GENEROS_REGISTRO = {
+    "accion": 28,
+    "aventura": 12,
+    "animacion": 16,
+    "comedia": 35,
+    "drama": 18,
+    "terror": 27,
+    "ciencia ficcion": 878,
+    "romance": 10749,
+}
+GENEROS_POR_USUARIO = 3  # filas "Porque te gusta ..."
+FAVORITAS_POR_USUARIO = 2  # filas "Porque guardaste ..."
+PELICULAS_POR_FILA = 12
+MINIMO_RECOMENDACIONES = 6  # con menos que esto se suman las populares (flujo A2)
+
+
+def normalizar_texto(texto):
+    """Minúsculas y sin tildes, para comparar nombres de géneros."""
+    descompuesto = unicodedata.normalize("NFD", str(texto))
+    return "".join(c for c in descompuesto if unicodedata.category(c) != "Mn").casefold().strip()
+
+
+def calcular_gustos(usuario, favoritas):
+    """Géneros que le gustan al usuario, del más al menos importante: [(id, nombre)].
+
+    Cada género elegido al registrarse suma 2 puntos y cada favorita que lo
+    tiene suma 1. Ante un empate se mantiene el orden de aparición.
+    """
+    ids_por_nombre = {normalizar_texto(nombre): id_genero for id_genero, nombre in mapa_generos().items()}
+    ids_por_nombre = {**IDS_GENEROS_REGISTRO, **ids_por_nombre}
+    puntos, nombres = {}, {}
+
+    def sumar(nombre, valor):
+        id_genero = ids_por_nombre.get(normalizar_texto(nombre))
+        if id_genero is None:
+            return
+        puntos[id_genero] = puntos.get(id_genero, 0) + valor
+        nombres.setdefault(id_genero, str(nombre))
+
+    for nombre in usuario.generos or []:
+        sumar(nombre, 2)
+    for favorita in favoritas:
+        for nombre in favorita.generos or []:
+            sumar(nombre, 1)
+
+    ordenados = sorted(puntos, key=lambda id_genero: -puntos[id_genero])
+    return [(id_genero, nombres[id_genero]) for id_genero in ordenados]
+
+
+def crear_fila(id_fila, titulo, datos, vistas):
+    """Fila de hasta PELICULAS_POR_FILA películas nuevas, o None si no queda ninguna."""
+    nombres = mapa_generos()
+    elegidas = []
+    for crudo in datos.get("results", []):
+        if es_contenido_adulto(crudo) or not crudo.get("poster_path") or crudo["id"] in vistas:
+            continue
+        vistas.add(crudo["id"])
+        elegidas.append(resumir_pelicula(crudo, nombres))
+        if len(elegidas) == PELICULAS_POR_FILA:
+            break
+    return {"id": id_fila, "titulo": titulo, "resultados": elegidas} if elegidas else None
+
+
+def fila_por_genero(id_genero, nombre, vistas):
+    datos = con_cache(
+        f"recomendar:genero:{id_genero}",
+        1800,
+        lambda: consultar_tmdb(
+            "/discover/movie",
+            {
+                "with_genres": id_genero,
+                "sort_by": "popularity.desc",
+                "include_adult": "false",
+                "vote_count.gte": 500,
+                "vote_average.gte": 6.5,
+            },
+        ),
+    )
+    return crear_fila(f"genero-{id_genero}", f"Porque te gusta {nombre}", datos, vistas)
+
+
+def fila_por_favorita(favorita, vistas):
+    datos = con_cache(
+        f"recomendar:similares:{favorita.pelicula_id}",
+        3600,
+        lambda: consultar_tmdb(f"/movie/{favorita.pelicula_id}/recommendations"),
+    )
+    return crear_fila(f"favorita-{favorita.pelicula_id}", f"Porque guardaste {favorita.titulo}", datos, vistas)
+
+
+@app.get("/api/recomendaciones")
+def recomendaciones():
+    # Flujo A3 de CU03: si la base de datos no responde, se avisa que las
+    # recomendaciones no están disponibles por ahora. El 401 (sin sesión) pasa de largo.
+    try:
+        usuario = usuario_de_la_sesion()
+        favoritas = db.session.scalars(
+            db.select(Favorito)
+            .where(Favorito.usuario_id == usuario.id)
+            .order_by(Favorito.agregado_en.desc(), Favorito.id.desc())
+            .limit(LIMITE_FAVORITAS)
+        ).all()
+    except SQLAlchemyError:
+        db.session.rollback()
+        log.exception("No se pudo leer el perfil del usuario para las recomendaciones")
+        raise ErrorApi(503, "Las recomendaciones no están disponibles temporalmente. Probá de nuevo en unos minutos.")
+
+    gustos = calcular_gustos(usuario, favoritas)
+    personalizado = bool(gustos or favoritas)
+    vistas = {favorita.pelicula_id for favorita in favoritas}  # lo que ya guardó no se recomienda
+
+    # Se intercalan las filas por género y por favorita, así arriba aparecen los dos motivos.
+    por_genero = [("genero", gusto) for gusto in gustos[:GENEROS_POR_USUARIO]]
+    por_favorita = [("favorita", favorita) for favorita in favoritas[:FAVORITAS_POR_USUARIO]]
+    pedidos = [pedido for par in zip_longest(por_genero, por_favorita) for pedido in par if pedido]
+
+    filas, errores = [], []
+    for tipo, dato in pedidos:
+        try:
+            fila = fila_por_genero(*dato, vistas) if tipo == "genero" else fila_por_favorita(dato, vistas)
+        except ErrorApi as error:
+            # Una fila que falla no tira abajo a las demás.
+            log.warning("No se pudo armar una fila de recomendaciones (%s): %s", tipo, error.mensaje)
+            errores.append(error)
+            continue
+        if fila:
+            filas.append(fila)
+
+    # Flujos A1 (sin gustos) y A2 (pocas coincidencias): se suman las populares de la semana.
+    ampliada = False
+    if sum(len(fila["resultados"]) for fila in filas) < MINIMO_RECOMENDACIONES:
+        try:
+            populares = con_cache("tendencias:week", 600, lambda: consultar_tmdb("/trending/movie/week"))
+            fila = crear_fila("populares", "Lo más popular de la semana", populares, vistas)
+        except ErrorApi as error:
+            errores.append(error)
+        else:
+            if fila:
+                filas.append(fila)
+                ampliada = personalizado
+
+    if not filas and errores:
+        raise errores[0]
+
+    return jsonify(
+        perfil={
+            "generos": [nombre for _, nombre in gustos[:GENEROS_POR_USUARIO]],
+            "favoritas": len(favoritas),
+            "personalizado": personalizado,
+        },
+        ampliada=ampliada,
+        secciones=filas,
+    )
 
 
 # ============================================

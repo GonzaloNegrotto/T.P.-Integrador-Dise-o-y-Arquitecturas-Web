@@ -114,6 +114,18 @@ export const api = {
   ubicacionInversa: (lat, lon, opciones) =>
     pedir(`/api/ubicacion/inversa?${new URLSearchParams({ lat, lon })}`, opciones),
 
+  // Rankings: los filtros vacíos (null o "") no se envían
+  ranking: (filtros, opciones) => {
+    const parametros = new URLSearchParams();
+    for (const [nombre, valor] of Object.entries(filtros)) {
+      if (valor !== null && valor !== undefined && valor !== "") parametros.set(nombre, valor);
+    }
+    return pedir(`/api/ranking?${parametros}`, opciones);
+  },
+
+  // Recomendaciones personalizadas (requieren sesión iniciada)
+  recomendaciones: (opciones) => pedir("/api/recomendaciones", opciones),
+
   // Mis favoritas (requieren sesión iniciada)
   favoritas: (opciones) => pedir("/api/favoritos", opciones),
   agregarFavorita: (idPelicula) =>

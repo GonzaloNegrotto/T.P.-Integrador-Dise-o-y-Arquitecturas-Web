@@ -2218,3 +2218,263 @@ fieldset.form-field legend {
     flex: 1;
   }
 }
+
+/* ============================================
+   Página Rankings
+   ============================================ */
+
+.ranking_herramientas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.ranking_filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.ranking_filtro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.ranking_filtro select {
+  width: auto;
+  min-width: 9.5rem;
+  padding-block: var(--space-2);
+}
+
+.ranking_encabezado {
+  margin-bottom: var(--space-4);
+}
+
+.ranking_encabezado .section_status {
+  max-width: 46rem;
+}
+
+/* Lista: una fila por película, con el puesto como protagonista */
+.ranking-lista {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ranking-fila {
+  display: grid;
+  grid-template-columns: clamp(3.25rem, 9vw, 5.5rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition), background-color var(--transition);
+}
+
+.ranking-fila:hover,
+.ranking-fila:focus-within {
+  border-color: var(--color-border);
+  background-color: var(--color-surface-alt);
+}
+
+/* Número calado, como en las tarjetas del Top 5 del inicio */
+.ranking-fila_pos {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 1.2rem + 3.6vw, 3.75rem);
+  line-height: 1;
+  text-align: center;
+  color: var(--color-bg);
+  -webkit-text-stroke: 1.5px rgba(var(--color-secondary-rgb), 0.55);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+/* Los tres primeros puestos van rellenos de dorado */
+.ranking-fila--podio .ranking-fila_pos {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 0;
+}
+
+.ranking-fila_link {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr) auto;
+  grid-template-areas: "poster info valor";
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  color: inherit;
+}
+
+.ranking-fila_link:hover {
+  color: inherit;
+}
+
+.ranking-fila_poster {
+  grid-area: poster;
+  border: 1px solid var(--color-border-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.ranking-fila_info {
+  grid-area: info;
+  min-width: 0;
+}
+
+.ranking-fila_titulo {
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.25;
+  transition: color var(--transition);
+}
+
+.ranking-fila_link:hover .ranking-fila_titulo,
+.ranking-fila_link:focus-visible .ranking-fila_titulo {
+  color: var(--color-secondary);
+}
+
+.ranking-fila_valor {
+  grid-area: valor;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.ranking-fila_cifra {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-fila_detalle {
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+}
+
+/* El corazón de la tarjeta flota sobre el póster; en la fila va en su propia columna */
+.ranking-fila .fav--tarjeta {
+  position: static;
+}
+
+.ranking-fila--skeleton {
+  pointer-events: none;
+}
+
+.ranking-fila--skeleton .ranking-fila_pos {
+  opacity: 0.35;
+}
+
+@media (max-width: 560px) {
+  .ranking_herramientas .tabs {
+    display: flex;
+    width: 100%;
+  }
+
+  .ranking_herramientas .tab {
+    flex: 1;
+  }
+
+  .ranking_filtros {
+    width: 100%;
+  }
+
+  .ranking_filtro {
+    flex: 1 1 8rem;
+  }
+
+  .ranking_filtro select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ranking-fila {
+    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-1);
+  }
+
+  /* En celular la cifra baja debajo del título y el póster ocupa las dos filas */
+  .ranking-fila_link {
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    grid-template-areas:
+      "poster info"
+      "poster valor";
+    align-items: start;
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .ranking-fila_valor {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-2);
+    text-align: left;
+  }
+
+  .ranking-fila_cifra {
+    font-size: 1.5rem;
+  }
+}
+
+/* ============================================
+   Página Recomendaciones
+   ============================================ */
+
+.recs_perfil {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.recs_contenido .section_status {
+  margin: 0 0 var(--space-4);
+}
+
+/* Aviso de que la lista no es 100 % personal (sin gustos o pocas coincidencias) */
+.recs_aviso {
+  max-width: 46rem;
+  margin: 0 0 var(--space-8);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-secondary);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background-color: rgba(var(--color-secondary-rgb), 0.08);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.recs_fila + .recs_fila {
+  margin-top: var(--space-12);
+}
+
+.recs_fila .section_head {
+  margin-bottom: var(--space-4);
+}
+
+.recs_fila-titulo-skeleton {
+  display: block;
+  width: min(18rem, 60%);
+  margin-bottom: var(--space-4);
+}

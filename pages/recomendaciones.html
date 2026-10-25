@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Películas recomendadas según tus géneros favoritos y las películas que guardaste." />
+  <title>Recomendaciones | MediaLens</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23B8323C'/%3E%3Ccircle cx='12' cy='11' r='5' fill='%23F5F1ED' fill-opacity='.8'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/layout.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <script src="../assets/js/aviso-servidor.js" defer></script>
+  <script type="module" src="../assets/js/recomendaciones.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container navbar">
+      <a class="navbar_brand" href="../index.html">
+        <span class="navbar_logo" aria-hidden="true"></span>
+        Media<span>Lens</span>
+      </a>
+      <button class="navbar_toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu-principal">&#9776;</button>
+      <nav class="navbar_menu" id="menu-principal" aria-label="Principal">
+        <ul class="navbar_links">
+          <li><a href="../index.html">Inicio</a></li>
+          <li><a href="rankings.html">Rankings</a></li>
+          <li><a href="recomendaciones.html">Recomendaciones</a></li>
+          <li><a href="cines.html">Cines cercanos</a></li>
+        </ul>
+        <div class="navbar_actions">
+          <a class="btn btn-outline" href="login.html">Ingresar</a>
+          <a class="btn btn-primary" href="registro.html">Registrarse</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="recs">
+    <section class="container recs_cabecera" aria-labelledby="recs-titulo">
+      <p class="eyebrow">Para vos</p>
+      <h1 class="recs_titulo" id="recs-titulo">Recomendaciones</h1>
+      <p class="recs_intro text-muted">
+        Películas elegidas con los géneros que marcaste al registrarte y con lo que guardás en Mis favoritas.
+      </p>
+      <div class="recs_perfil" id="recs-perfil" hidden></div>
+    </section>
+
+    <section class="container recs_contenido" aria-label="Películas recomendadas">
+      <p class="section_status text-muted" id="recs-estado" aria-live="polite"></p>
+      <p class="recs_aviso" id="recs-aviso" role="status" hidden></p>
+      <div id="recs-filas">
+        <noscript><p class="placeholder-note">Activá JavaScript para ver tus recomendaciones.</p></noscript>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer_bottom">
+        <p>&copy; 2026 MediaLens &mdash; TP Integrador, Diseño y Arquitecturas Web.</p>
+        <p>Datos e imágenes de <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a>.</p>
+        <p><a href="privacidad.html">Política de privacidad</a></p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
