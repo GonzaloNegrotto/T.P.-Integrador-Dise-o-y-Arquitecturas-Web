@@ -38,11 +38,11 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 if __package__:
     from .conexionDB import DATABASE_URL, db
-    from .modeloDatos import Favorito, Usuario
+    from .modeloDatos import Favorito, Rol, Usuario
 else:
     # Permite ejecutar directamente `python Back/app.py`.
     from conexionDB import DATABASE_URL, db
-    from modeloDatos import Favorito, Usuario
+    from modeloDatos import Favorito, Rol, Usuario
 
 # Importar los modelos registra sus tablas en el metadata de SQLAlchemy antes
 # de que Flask-Migrate compare el esquema de la base de datos.
@@ -288,6 +288,7 @@ def respuesta_usuario(usuario):
         "email": usuario.email,
         "fecha_nacimiento": usuario.fecha_nacimiento.isoformat(),
         "generos": usuario.generos,
+        "rol": usuario.rol.nombre,
     }
 
 
@@ -329,12 +330,18 @@ def registrar_usuario():
     if not isinstance(generos, list) or not 1 <= len(generos) <= 5:
         raise ErrorApi(400, "Elegí entre 1 y 5 géneros favoritos.")
 
+    visitante = db.session.scalar(db.select(Rol).where(Rol.nombre == "visitante"))
+    if visitante is None:
+        log.error("No existe el rol visitante en la base de datos.")
+        raise ErrorApi(500, "La configuración de roles no está disponible.")
+
     usuario = Usuario(
         nombre=nombre,
         email=email,
         password_hash=generate_password_hash(password),
         fecha_nacimiento=fecha_nacimiento,
         generos=generos,
+        rol=visitante,
     )
     db.session.add(usuario)
     try:
