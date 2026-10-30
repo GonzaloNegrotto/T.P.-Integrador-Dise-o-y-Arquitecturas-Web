@@ -462,15 +462,35 @@ def buscar():
         raise ErrorApi(400, "Escribí al menos 2 caracteres para buscar.")
     if len(consulta) > 100:
         raise ErrorApi(400, "La búsqueda es demasiado larga (máximo 100 caracteres).")
-    datos = con_cache(
-        f"buscar:{consulta.lower()}",
-        600,
-        lambda: consultar_tmdb("/search/movie", {"query": consulta, "include_adult": "false"}),
-    )
+    filtros = leer_filtros_busqueda()
+    con_filtros = any(filtros[nombre] is not None for nombre in ("genero", "idioma", "puntaje_min"))
+
+    primera = pagina_busqueda(consulta, filtros["anio"], 1)
+    crudas = list(primera.get("results", []))
+    ultima = min(PAGINAS_BUSQUEDA_CON_FILTROS if con_filtros else 1, primera.get("total_pages") or 1)
+    for pagina in range(2, ultima + 1):
+        try:
+            crudas += pagina_busqueda(consulta, filtros["anio"], pagina).get("results", [])
+        except ErrorApi:
+            break  # con las páginas que ya llegaron alcanza para responder
+
+    # TMDB puede repetir una película entre páginas: el dict se queda con una sola.
+    elegidas = list({p["id"]: p for p in crudas if cumple_filtros(p, filtros)}.values())
+    clave = ORDENES_BUSQUEDA[filtros["orden"]]
+    if clave:
+        elegidas.sort(key=clave, reverse=True)
+
+    nombres = mapa_generos()
+    resultados = [
+        {**resumir_pelicula(p, nombres), "popularidad": round(p.get("popularity") or 0)}
+        for p in elegidas
+    ]
     return jsonify(
         consulta=consulta,
-        total=datos.get("total_results", 0),
-        resultados=listar_peliculas(datos),
+        filtros=filtros,
+        # Sin filtros, el total que informa TMDB; con filtros, las que pasaron en las páginas revisadas.
+        total=len(resultados) if con_filtros else primera.get("total_results", 0),
+        resultados=resultados,
     )
 
 
@@ -818,12 +838,8 @@ def leer_entero_opcional(nombre, minimo, maximo, mensaje):
     return valor
 
 
-def leer_filtros_ranking():
-    """Valida ?criterio=&genero=&anio=&idioma=&pagina= y los devuelve en ese orden."""
-    criterio = request.args.get("criterio", "puntaje")
-    if criterio not in CRITERIOS_RANKING:
-        raise ErrorApi(400, "El criterio tiene que ser 'puntaje' o 'popularidad'.")
-
+def leer_genero_anio_idioma():
+    """Valida ?genero=&anio=&idioma= (los usan el ranking y la búsqueda)."""
     genero = leer_entero_opcional("genero", 1, 999999, "El género no es válido.")
     if genero is not None:
         conocidos = mapa_generos()  # vacío si TMDB no responde: ahí no se puede comprobar
@@ -838,11 +854,93 @@ def leer_filtros_ranking():
     idioma = (request.args.get("idioma") or "").strip().lower() or None
     if idioma is not None and idioma not in IDIOMAS_RANKING:
         raise ErrorApi(400, "El idioma no es válido.")
+    return genero, anio, idioma
 
+
+def leer_filtros_ranking():
+    """Valida ?criterio=&genero=&anio=&idioma=&pagina= y los devuelve en ese orden."""
+    criterio = request.args.get("criterio", "puntaje")
+    if criterio not in CRITERIOS_RANKING:
+        raise ErrorApi(400, "El criterio tiene que ser 'puntaje' o 'popularidad'.")
+
+    genero, anio, idioma = leer_genero_anio_idioma()
     pagina = leer_entero_opcional(
         "pagina", 1, PAGINAS_MAXIMAS, f"La página tiene que estar entre 1 y {PAGINAS_MAXIMAS}."
     ) or 1
     return criterio, genero, anio, idioma, pagina
+
+
+# ============================================
+# Búsqueda con filtros
+# RF01, RF02 y CU01. /search/movie de TMDB solo acepta el año, así que el
+# género, el idioma y el puntaje mínimo se filtran acá sobre los resultados.
+# Con filtros activos se revisan más páginas para que no queden muy pocas.
+# ============================================
+
+PAGINAS_BUSQUEDA_CON_FILTROS = 3
+MINIMO_VOTOS_BUSQUEDA = 50  # con menos votos, el puntaje no es representativo
+
+
+def clave_puntaje(pelicula):
+    """Primero las que tienen votos suficientes; después, por puntaje y por votos."""
+    votos = pelicula.get("vote_count") or 0
+    return (votos >= MINIMO_VOTOS_BUSQUEDA, pelicula.get("vote_average") or 0, votos)
+
+
+ORDENES_BUSQUEDA = {
+    "relevancia": None,  # el orden en que responde TMDB
+    "puntaje": clave_puntaje,
+    "popularidad": lambda p: p.get("popularity") or 0,
+    "fecha": lambda p: p.get("release_date") or "",
+}
+
+
+def leer_filtros_busqueda():
+    """Valida ?genero=&anio=&idioma=&puntaje_min=&orden= y los devuelve en un dict."""
+    genero, anio, idioma = leer_genero_anio_idioma()
+
+    puntaje_min = None
+    bruto = (request.args.get("puntaje_min") or "").strip().replace(",", ".")
+    if bruto:
+        try:
+            puntaje_min = float(bruto)
+        except ValueError:
+            puntaje_min = -1  # cae en el error de abajo
+        if not 0 <= puntaje_min <= 10:  # también descarta nan
+            raise ErrorApi(400, "El puntaje mínimo tiene que ser un número entre 0 y 10.")
+
+    orden = request.args.get("orden") or "relevancia"
+    if orden not in ORDENES_BUSQUEDA:
+        raise ErrorApi(400, "El orden tiene que ser relevancia, puntaje, popularidad o fecha.")
+
+    return {"genero": genero, "anio": anio, "idioma": idioma, "puntaje_min": puntaje_min, "orden": orden}
+
+
+def pagina_busqueda(consulta, anio, pagina):
+    parametros = {"query": consulta, "include_adult": "false", "page": pagina}
+    if anio:
+        parametros["primary_release_year"] = anio
+    return con_cache(
+        f"buscar:{consulta.lower()}:{anio}:{pagina}",
+        600,
+        lambda: consultar_tmdb("/search/movie", parametros),
+    )
+
+
+def cumple_filtros(pelicula, filtros):
+    genero, idioma, puntaje_min = filtros["genero"], filtros["idioma"], filtros["puntaje_min"]
+    return (
+        not es_contenido_adulto(pelicula)
+        and (genero is None or genero in (pelicula.get("genre_ids") or []))
+        and (idioma is None or pelicula.get("original_language") == idioma)
+        and (
+            puntaje_min is None
+            or (
+                (pelicula.get("vote_count") or 0) >= MINIMO_VOTOS_BUSQUEDA
+                and (pelicula.get("vote_average") or 0) >= puntaje_min
+            )
+        )
+    )
 
 
 def parametros_ranking(criterio, genero, anio, idioma, pagina):

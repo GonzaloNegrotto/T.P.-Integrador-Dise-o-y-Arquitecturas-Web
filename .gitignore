@@ -30,3 +30,6 @@ Desktop.ini
 
 # ===== Logs y temporales =====
 *.log
+
+# ===== Herramientas locales =====
+.claude/

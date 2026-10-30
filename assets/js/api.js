@@ -97,6 +97,15 @@ async function pedir(ruta, { signal, metodo = "GET", cuerpo } = {}) {
   return datos;
 }
 
+/** Arma la query string sin los valores vacíos (null, undefined o ""). */
+function parametrosSinVacios(valores) {
+  const parametros = new URLSearchParams();
+  for (const [nombre, valor] of Object.entries(valores)) {
+    if (valor !== null && valor !== undefined && valor !== "") parametros.set(nombre, valor);
+  }
+  return parametros;
+}
+
 export const api = {
   tendencias: (periodo, opciones) =>
     pedir(`/api/tendencias?${new URLSearchParams({ periodo })}`, opciones),
@@ -104,7 +113,9 @@ export const api = {
   generos: (opciones) => pedir("/api/generos", opciones),
   descubrir: (idGenero, opciones) =>
     pedir(`/api/descubrir?${new URLSearchParams({ genero: idGenero })}`, opciones),
-  buscar: (consulta, opciones) => pedir(`/api/buscar?${new URLSearchParams({ q: consulta })}`, opciones),
+  // Búsqueda por título; filtros opcionales: genero, anio, idioma, puntaje_min y orden
+  buscar: (consulta, { filtros = {}, ...opciones } = {}) =>
+    pedir(`/api/buscar?${parametrosSinVacios({ q: consulta, ...filtros })}`, opciones),
   pelicula: (id, opciones) => pedir(`/api/pelicula/${encodeURIComponent(id)}`, opciones),
 
   // Cines cercanos (datos de OpenStreetMap a través de nuestro servidor)
@@ -115,13 +126,7 @@ export const api = {
     pedir(`/api/ubicacion/inversa?${new URLSearchParams({ lat, lon })}`, opciones),
 
   // Rankings: los filtros vacíos (null o "") no se envían
-  ranking: (filtros, opciones) => {
-    const parametros = new URLSearchParams();
-    for (const [nombre, valor] of Object.entries(filtros)) {
-      if (valor !== null && valor !== undefined && valor !== "") parametros.set(nombre, valor);
-    }
-    return pedir(`/api/ranking?${parametros}`, opciones);
-  },
+  ranking: (filtros, opciones) => pedir(`/api/ranking?${parametrosSinVacios(filtros)}`, opciones),
 
   // Recomendaciones personalizadas (requieren sesión iniciada)
   recomendaciones: (opciones) => pedir("/api/recomendaciones", opciones),
