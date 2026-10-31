@@ -997,3 +997,42 @@
     padding-block: var(--space-8) var(--space-4);
   }
 }
+
+/* ============================================
+   Página Estadísticas
+   ============================================ */
+
+.stats {
+  padding-bottom: var(--space-16);
+}
+
+.stats_cabecera {
+  padding-block: var(--space-12) var(--space-6);
+}
+
+.stats_titulo {
+  margin-bottom: var(--space-3);
+}
+
+.stats_intro {
+  max-width: 46rem;
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+.stats_bloque--mias {
+  margin-top: var(--space-16);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border-soft);
+}
+
+@media (max-width: 560px) {
+  .stats_cabecera {
+    padding-block: var(--space-8) var(--space-4);
+  }
+
+  .stats_bloque--mias {
+    margin-top: var(--space-12);
+    padding-top: var(--space-8);
+  }
+}

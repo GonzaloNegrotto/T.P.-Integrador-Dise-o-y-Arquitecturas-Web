@@ -131,6 +131,10 @@ export const api = {
   // Recomendaciones personalizadas (requieren sesión iniciada)
   recomendaciones: (opciones) => pedir("/api/recomendaciones", opciones),
 
+  // Estadísticas generales (TMDB) y de Mis favoritas (requieren sesión iniciada)
+  estadisticas: (opciones) => pedir("/api/estadisticas", opciones),
+  misEstadisticas: (opciones) => pedir("/api/estadisticas/mias", opciones),
+
   // Mis favoritas (requieren sesión iniciada)
   favoritas: (opciones) => pedir("/api/favoritos", opciones),
   agregarFavorita: (idPelicula) =>

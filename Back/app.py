@@ -20,7 +20,10 @@ import os
 import threading
 import time
 import unicodedata
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
+from functools import partial
 from itertools import zip_longest
 from pathlib import Path
 
@@ -1157,6 +1160,115 @@ def recomendaciones():
         },
         ampliada=ampliada,
         secciones=filas,
+    )
+
+
+# ============================================
+# Estadísticas
+# RF06. El catálogo no se guarda en la base, así que las cifras generales se
+# calculan con /discover/movie de TMDB: cada consulta informa cuántas películas
+# cumplen el filtro (total_results) y trae las 20 más populares, con las que se
+# calcula un puntaje promedio de muestra. Las personales salen de la tabla
+# favoritos y no consultan a TMDB.
+# ============================================
+
+MINIMO_VOTOS_ESTADISTICAS = 100  # no se cuentan las películas casi sin votos
+PRIMERA_DECADA = 1950
+SEGUNDOS_CACHE_ESTADISTICAS = 24 * 3600
+CONSULTAS_EN_PARALELO = 5  # pocas a la vez, para no saturar a TMDB
+
+
+def promedio(valores):
+    valores = list(valores)
+    return round(sum(valores) / len(valores), 1) if valores else None
+
+
+def resumen_discover(clave, filtros):
+    """Cantidad de películas que cumplen los filtros y puntaje promedio de las 20 más populares."""
+    datos = con_cache(
+        f"estadisticas:{clave}",
+        SEGUNDOS_CACHE_ESTADISTICAS,
+        lambda: consultar_tmdb("/discover/movie", {
+            "include_adult": "false",
+            "sort_by": "popularity.desc",
+            "vote_count.gte": MINIMO_VOTOS_ESTADISTICAS,
+            **filtros,
+        }),
+    )
+    muestra = [p for p in datos.get("results", []) if not es_contenido_adulto(p)]
+    return {
+        "cantidad": datos.get("total_results") or 0,
+        "puntaje_promedio": promedio(p.get("vote_average") or 0 for p in muestra),
+    }
+
+
+def filtros_decada(decada, hoy):
+    fin = min(date(decada + 9, 12, 31), hoy)  # la década actual llega hasta hoy, sin estrenos futuros
+    return {"primary_release_date.gte": f"{decada}-01-01", "primary_release_date.lte": fin.isoformat()}
+
+
+def intentar(tarea):
+    """Ejecuta la tarea; si TMDB falla, devuelve el error en lugar de lanzarlo."""
+    try:
+        return tarea()
+    except ErrorApi as error:
+        return error
+
+
+@app.get("/api/estadisticas")
+def estadisticas():
+    generos = obtener_generos()  # si TMDB no responde, corta acá con su error
+    hoy = date.today()
+    decadas = list(range(PRIMERA_DECADA, hoy.year + 1, 10))
+
+    tareas = (
+        [partial(resumen_discover, "total", {})]
+        + [partial(resumen_discover, f"genero:{g['id']}", {"with_genres": g["id"]}) for g in generos]
+        + [partial(resumen_discover, f"decada:{d}:{hoy.year}", filtros_decada(d, hoy)) for d in decadas]
+    )
+    with ThreadPoolExecutor(max_workers=CONSULTAS_EN_PARALELO) as pool:
+        resultados = list(pool.map(intentar, tareas))
+
+    errores = [r for r in resultados if isinstance(r, ErrorApi)]
+    if len(errores) == len(resultados):
+        raise errores[0]
+
+    total, por_genero, por_decada = (
+        resultados[0],
+        resultados[1:1 + len(generos)],
+        resultados[1 + len(generos):],
+    )
+    return jsonify(
+        minimo_votos=MINIMO_VOTOS_ESTADISTICAS,
+        total=None if isinstance(total, ErrorApi) else total,
+        por_genero=sorted(
+            ({"id": g["id"], "nombre": g["name"], **r} for g, r in zip(generos, por_genero) if not isinstance(r, ErrorApi)),
+            key=lambda fila: fila["cantidad"],
+            reverse=True,
+        ),
+        por_decada=[{"decada": d, **r} for d, r in zip(decadas, por_decada) if not isinstance(r, ErrorApi)],
+        incompleto=bool(errores),  # alguna consulta falló: se muestra lo que se pudo armar
+    )
+
+
+@app.get("/api/estadisticas/mias")
+def mis_estadisticas():
+    """Estadísticas de Mis favoritas del usuario con la sesión iniciada."""
+    try:
+        usuario = usuario_de_la_sesion()
+        favoritas = db.session.scalars(db.select(Favorito).where(Favorito.usuario_id == usuario.id)).all()
+    except SQLAlchemyError:
+        db.session.rollback()
+        log.exception("No se pudieron leer las favoritas para las estadísticas")
+        raise ErrorApi(503, "Tus estadísticas no están disponibles temporalmente. Probá de nuevo en unos minutos.")
+
+    generos = Counter(genero for f in favoritas for genero in (f.generos or []))
+    decadas = Counter(int(f.anio) // 10 * 10 for f in favoritas if f.anio and f.anio.isdigit())
+    return jsonify(
+        cantidad=len(favoritas),
+        puntaje_promedio=promedio(f.puntaje for f in favoritas),
+        por_genero=[{"nombre": nombre, "cantidad": cantidad} for nombre, cantidad in generos.most_common()],
+        por_decada=[{"decada": decada, "cantidad": cantidad} for decada, cantidad in sorted(decadas.items())],
     )
 
 

@@ -2478,3 +2478,283 @@ fieldset.form-field legend {
   width: min(18rem, 60%);
   margin-bottom: var(--space-4);
 }
+
+/* ============================================
+   Página Estadísticas
+   Cifras destacadas y gráficos de barras hechos
+   con el DOM. Una sola serie por gráfico, en el
+   rojo claro de la paleta (contraste 3:1 sobre la
+   superficie) y con el valor escrito al lado.
+   Las barras siempre arrancan en cero.
+   ============================================ */
+
+.stats_bloque > .section_status {
+  margin: 0 0 var(--space-4);
+}
+
+.stats_aviso {
+  max-width: 46rem;
+  margin: 0 0 var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-secondary);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background-color: rgba(var(--color-secondary-rgb), 0.08);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.stats_seccion {
+  margin-top: var(--space-12);
+}
+
+.stats_seccion .section_head {
+  margin-bottom: var(--space-4);
+}
+
+.stats_nota {
+  max-width: 46rem;
+  margin: var(--space-8) 0 0;
+  font-size: var(--fs-xs);
+}
+
+.stats_skeleton-lineas {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+}
+
+/* ---------- Cifras destacadas ---------- */
+
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cifra {
+  min-height: 7.5rem;
+  padding: var(--space-4) var(--space-6);
+  background: var(--gradient-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+}
+
+.cifra_valor {
+  display: block;
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.5rem + 1.6vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+}
+
+.cifra_etiqueta {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text);
+  font-size: var(--fs-sm);
+}
+
+.cifra_detalle {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+}
+
+/* ---------- Barras horizontales ---------- */
+
+.barras {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barras_fila {
+  display: grid;
+  grid-template-columns: minmax(6rem, 10rem) minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  transition: background-color var(--transition);
+}
+
+.barras_fila:hover {
+  background-color: var(--color-surface);
+}
+
+.barras_etiqueta {
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barras_pista {
+  display: block;
+  height: 0.875rem;
+}
+
+.barras_barra {
+  display: block;
+  width: calc(var(--valor) * 100%);
+  min-width: 2px;
+  height: 100%;
+  background-color: var(--color-primary-hover);
+  border-radius: 0 4px 4px 0;
+  transform-origin: left;
+  animation: barra-crece var(--transition-slow) both;
+}
+
+.barras--con-dato .barras_fila {
+  grid-template-columns: minmax(6rem, 10rem) minmax(0, 1fr) 4.5rem 3.75rem;
+}
+
+.barras_valor {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---------- Columnas (décadas) ---------- */
+
+.columnas {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  height: 16rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.columnas_item {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  min-width: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  transition: background-color var(--transition);
+}
+
+.columnas_item:hover {
+  background-color: var(--color-surface);
+}
+
+.columnas_area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  min-height: 0;
+  padding-inline: 2px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.columnas_valor {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.columnas_barra {
+  display: block;
+  width: min(100%, 3.5rem);
+  height: calc(var(--valor) * (100% - 1.5rem));
+  min-height: 2px;
+  background-color: var(--color-primary-hover);
+  border-radius: 4px 4px 0 0;
+  transform-origin: bottom;
+  animation: columna-crece var(--transition-slow) both;
+}
+
+.barras_dato,
+.columnas_dato {
+  color: var(--color-secondary);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.barras_dato {
+  text-align: right;
+}
+
+.columnas_dato {
+  padding-bottom: var(--space-1);
+  text-align: center;
+}
+
+.columnas_etiqueta {
+  padding-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+@keyframes barra-crece {
+  from { transform: scaleX(0); }
+}
+
+@keyframes columna-crece {
+  from { transform: scaleY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barras_barra,
+  .columnas_barra {
+    animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .cifras {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cifra {
+    min-height: 0;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .barras_fila,
+  .barras--con-dato .barras_fila {
+    grid-template-columns: minmax(5rem, 6.5rem) minmax(0, 1fr) 3.25rem;
+    gap: var(--space-2);
+    padding-inline: var(--space-1);
+  }
+
+  /* En celular el puntaje baja debajo de la cantidad */
+  .barras--con-dato .barras_fila {
+    grid-template-areas:
+      "etiqueta pista valor"
+      "etiqueta pista dato";
+    row-gap: 0;
+  }
+
+  .barras--con-dato .barras_etiqueta { grid-area: etiqueta; }
+  .barras--con-dato .barras_pista { grid-area: pista; }
+  .barras--con-dato .barras_valor { grid-area: valor; }
+  .barras--con-dato .barras_dato { grid-area: dato; }
+
+  .columnas_dato {
+    font-size: 0.625rem;
+  }
+
+  .columnas {
+    height: 12rem;
+  }
+
+  .columnas_valor {
+    font-size: 0.6875rem;
+  }
+}
