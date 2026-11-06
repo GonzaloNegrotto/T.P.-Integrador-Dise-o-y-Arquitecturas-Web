@@ -33,3 +33,7 @@ Desktop.ini
 
 # ===== Herramientas locales =====
 .claude/
+
+# ===== Respaldos de la base =====
+# Contienen datos personales (emails, fechas de nacimiento y hashes de contraseñas).
+respaldos/

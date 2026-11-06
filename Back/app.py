@@ -42,10 +42,12 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 if __package__:
     from .conexionDB import DATABASE_URL, db
     from .modeloDatos import Favorito, Rol, Usuario
+    from .respaldo import respaldo_cli
 else:
     # Permite ejecutar directamente `python Back/app.py`.
     from conexionDB import DATABASE_URL, db
     from modeloDatos import Favorito, Rol, Usuario
+    from respaldo import respaldo_cli
 
 # Importar los modelos registra sus tablas en el metadata de SQLAlchemy antes
 # de que Flask-Migrate compare el esquema de la base de datos.
@@ -88,6 +90,9 @@ db.init_app(app)
 # Habilita los comandos `flask db ...` (migrate, upgrade, current) usando la
 # carpeta migrations/ de la raíz, sin importar desde dónde se ejecuten.
 migrate = Migrate(app, db, directory=str(RAIZ / "migrations"))
+
+# Habilita los comandos `flask respaldo crear | listar | restaurar` (ver respaldo.py).
+app.cli.add_command(respaldo_cli)
 
 # Sesión HTTP reutilizable: mantiene la conexión abierta entre consultas
 # (más rápido) y reintenta una vez si TMDB responde 5xx o 429.
