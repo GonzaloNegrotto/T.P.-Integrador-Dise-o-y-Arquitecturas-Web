@@ -41,12 +41,12 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 if __package__:
     from .conexionDB import DATABASE_URL, db
-    from .modeloDatos import Favorito, Rol, Usuario
+    from .modeloDatos import Auditoria, Favorito, Rol, Usuario
     from .respaldo import respaldo_cli
 else:
     # Permite ejecutar directamente `python Back/app.py`.
     from conexionDB import DATABASE_URL, db
-    from modeloDatos import Favorito, Rol, Usuario
+    from modeloDatos import Auditoria, Favorito, Rol, Usuario
     from respaldo import respaldo_cli
 
 # Importar los modelos registra sus tablas en el metadata de SQLAlchemy antes
@@ -210,6 +210,13 @@ _cache = {}
 MAX_ENTRADAS_CACHE = 300
 
 
+def vaciar_cache():
+    """Vacía la caché en memoria y devuelve cuántas entradas había."""
+    cantidad = len(_cache)
+    _cache.clear()
+    return cantidad
+
+
 def con_cache(clave, segundos, obtener):
     """Devuelve el dato guardado si es reciente; si no, lo pide de nuevo.
 
@@ -296,8 +303,30 @@ def respuesta_usuario(usuario):
         "email": usuario.email,
         "fecha_nacimiento": usuario.fecha_nacimiento.isoformat(),
         "generos": usuario.generos,
+        "estado": usuario.estado,
         "rol": usuario.rol.nombre,
     }
+
+
+def registrar_auditoria(usuario_id, accion, entidad, entidad_id=None, detalle=None):
+    """Agrega una auditoría sin copiar credenciales ni datos personales."""
+    db.session.add(
+        Auditoria(
+            usuario_id=usuario_id,
+            accion=accion,
+            entidad=entidad,
+            entidad_id=entidad_id,
+            detalle=detalle or {},
+        )
+    )
+
+
+def usuario_administrador():
+    """Exige una cuenta activa con permisos administrativos."""
+    usuario = usuario_de_la_sesion()
+    if usuario.rol.nombre not in ("administrador", "superadministrador"):
+        raise ErrorApi(403, "No tenés permisos para realizar esta acción.")
+    return usuario
 
 
 EDAD_MINIMA = 13
@@ -338,9 +367,9 @@ def registrar_usuario():
     if not isinstance(generos, list) or not 1 <= len(generos) <= 5:
         raise ErrorApi(400, "Elegí entre 1 y 5 géneros favoritos.")
 
-    visitante = db.session.scalar(db.select(Rol).where(Rol.nombre == "visitante"))
-    if visitante is None:
-        log.error("No existe el rol visitante en la base de datos.")
+    rol_usuario = db.session.scalar(db.select(Rol).where(Rol.nombre == "usuario"))
+    if rol_usuario is None:
+        log.error("No existe el rol usuario en la base de datos.")
         raise ErrorApi(500, "La configuración de roles no está disponible.")
 
     usuario = Usuario(
@@ -349,10 +378,18 @@ def registrar_usuario():
         password_hash=generate_password_hash(password),
         fecha_nacimiento=fecha_nacimiento,
         generos=generos,
-        rol=visitante,
+        rol=rol_usuario,
     )
     db.session.add(usuario)
     try:
+        db.session.flush()
+        registrar_auditoria(
+            usuario.id,
+            "crear",
+            "usuarios",
+            usuario.id,
+            {"campos": ["nombre", "email", "fecha_nacimiento", "generos", "rol_id", "estado"]},
+        )
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -368,6 +405,8 @@ def iniciar_sesion():
     email = str(datos.get("email", "")).strip().lower()
     password = str(datos.get("password", ""))
     usuario = db.session.scalar(db.select(Usuario).where(Usuario.email == email))
+    if usuario is not None and usuario.estado == "bloqueado":
+        raise ErrorApi(403, "La cuenta está bloqueada.")
     if usuario is None or not check_password_hash(usuario.password_hash, password):
         raise ErrorApi(401, "El email o la contraseña no son correctos.")
 
@@ -388,6 +427,9 @@ def usuario_de_la_sesion():
     if usuario is None:
         session.clear()
         raise ErrorApi(401, "La sesión ya no es válida.")
+    if usuario.estado == "bloqueado":
+        session.clear()
+        raise ErrorApi(403, "La cuenta está bloqueada.")
     return usuario
 
 
@@ -402,6 +444,103 @@ def cerrar_sesion():
     """Elimina la sesión actual."""
     session.clear()
     return jsonify(mensaje="Sesión cerrada.")
+
+
+@app.patch("/api/admin/usuarios/<int:id_usuario>")
+def modificar_usuario(id_usuario):
+    """Modifica campos no sensibles de una cuenta y audita los nombres de campo."""
+    actor = usuario_administrador()
+    usuario = db.session.get(Usuario, id_usuario)
+    if usuario is None:
+        raise ErrorApi(404, "La cuenta no existe.")
+    datos = request.get_json(silent=True) or {}
+    campos = []
+
+    if "nombre" in datos:
+        nombre = str(datos["nombre"]).strip()
+        if not nombre or len(nombre) > 40:
+            raise ErrorApi(400, "El nombre es obligatorio y debe tener hasta 40 caracteres.")
+        usuario.nombre = nombre
+        campos.append("nombre")
+    if "email" in datos:
+        email = str(datos["email"]).strip().lower()
+        if "@" not in email or len(email) > 255:
+            raise ErrorApi(400, "Ingresá un email válido.")
+        usuario.email = email
+        campos.append("email")
+    if "generos" in datos:
+        generos = datos["generos"]
+        if not isinstance(generos, list) or not 1 <= len(generos) <= 5:
+            raise ErrorApi(400, "Elegí entre 1 y 5 géneros favoritos.")
+        usuario.generos = generos
+        campos.append("generos")
+    if not campos:
+        raise ErrorApi(400, "No hay campos modificables para actualizar.")
+
+    registrar_auditoria(actor.id, "modificar", "usuarios", usuario.id, {"campos": campos})
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ErrorApi(409, "Ya existe una cuenta registrada con ese email.")
+    return jsonify(usuario=respuesta_usuario(usuario))
+
+
+@app.post("/api/admin/usuarios/<int:id_usuario>/estado")
+def cambiar_estado_usuario(id_usuario):
+    """Bloquea o desbloquea una cuenta y registra el cambio."""
+    actor = usuario_administrador()
+    usuario = db.session.get(Usuario, id_usuario)
+    if usuario is None:
+        raise ErrorApi(404, "La cuenta no existe.")
+    estado = (request.get_json(silent=True) or {}).get("estado")
+    if estado not in ("activo", "bloqueado"):
+        raise ErrorApi(400, "El estado debe ser 'activo' o 'bloqueado'.")
+    if usuario.estado == estado:
+        return jsonify(usuario=respuesta_usuario(usuario))
+
+    usuario.estado = estado
+    registrar_auditoria(
+        actor.id,
+        "bloquear" if estado == "bloqueado" else "desbloquear",
+        "usuarios",
+        usuario.id,
+        {"estado": estado},
+    )
+    db.session.commit()
+    if usuario.id == actor.id and estado == "bloqueado":
+        session.clear()
+    return jsonify(usuario=respuesta_usuario(usuario))
+
+
+@app.put("/api/admin/usuarios/<int:id_usuario>/rol")
+def asignar_rol_usuario(id_usuario):
+    """Asigna un rol existente a una cuenta y registra el cambio."""
+    actor = usuario_administrador()
+    usuario = db.session.get(Usuario, id_usuario)
+    if usuario is None:
+        raise ErrorApi(404, "La cuenta no existe.")
+    nombre_rol = str((request.get_json(silent=True) or {}).get("rol", "")).strip()
+    rol = db.session.scalar(db.select(Rol).where(Rol.nombre == nombre_rol))
+    if rol is None:
+        raise ErrorApi(400, "El rol indicado no existe.")
+    if usuario.rol_id == rol.id:
+        return jsonify(usuario=respuesta_usuario(usuario))
+
+    usuario.rol = rol
+    registrar_auditoria(actor.id, "asignar rol", "usuarios", usuario.id, {"rol_id": rol.id})
+    db.session.commit()
+    return jsonify(usuario=respuesta_usuario(usuario))
+
+
+@app.delete("/api/admin/cache")
+def limpiar_cache():
+    """Vacía la caché y deja constancia de la acción administrativa."""
+    actor = usuario_administrador()
+    cantidad = vaciar_cache()
+    registrar_auditoria(actor.id, "vaciar la caché", "cache", None, {"entradas": cantidad})
+    db.session.commit()
+    return jsonify(entradas_eliminadas=cantidad)
 
 
 @app.get("/api/tendencias")

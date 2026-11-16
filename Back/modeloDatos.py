@@ -36,6 +36,7 @@ class Usuario(db.Model):
     nombre = db.Column(String(40), nullable=False)
     email = db.Column(String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(String(255), nullable=False)
+    estado = db.Column(String(10), nullable=False, default="activo", server_default="activo")
     fecha_nacimiento = db.Column(Date, nullable=False)
     generos = db.Column(JSON, nullable=False, default=list)
     rol_id = db.Column(
@@ -53,6 +54,30 @@ class Usuario(db.Model):
 
     def __repr__(self):
         return f"<Usuario {self.email}>"
+
+
+class Auditoria(db.Model):
+    """Registro mínimo de acciones administrativas y de cuenta."""
+
+    __tablename__ = "auditoria"
+
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(
+        Integer,
+        ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    accion = db.Column(String(40), nullable=False)
+    entidad = db.Column(String(30), nullable=False)
+    entidad_id = db.Column(Integer, nullable=True)
+    detalle = db.Column(JSON, nullable=False)
+    fecha = db.Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    usuario = db.relationship("Usuario", backref="auditorias")
 
 
 class Favorito(db.Model):
