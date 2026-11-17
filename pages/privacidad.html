@@ -46,7 +46,7 @@
       <p class="legal_intro text-muted">
         Qué datos tuyos guardamos, para qué los usamos y cómo podés consultarlos, corregirlos o pedir que los borremos.
       </p>
-      <p class="legal_fecha">Última actualización: 22 de octubre de 2026</p>
+      <p class="legal_fecha">Última actualización: 6 de noviembre de 2026</p>
 
       <!-- Primera capa: el resumen que se lee en 30 segundos -->
       <ul class="legal_resumen" aria-label="Resumen">
@@ -208,6 +208,7 @@
             <li>La conexión entre el servidor y la base de datos está cifrada.</li>
             <li>La cookie de sesión está firmada (no se puede alterar) y no es accesible desde JavaScript.</li>
             <li>El acceso a la base de datos está restringido al equipo de MediaLens, que guarda secreto sobre los datos (artículo 10).</li>
+            <li>Las copias de seguridad de la base se guardan fuera del repositorio del código y con el mismo acceso restringido.</li>
           </ul>
         </section>
 
@@ -220,6 +221,13 @@
               <strong>Búsquedas de cines</strong>: para responder más rápido, el servidor recuerda los resultados en
               memoria, sin ningún dato que te identifique, durante 6 horas como máximo (24 horas para las direcciones)
               o hasta que se reinicia.
+            </li>
+            <li>
+              <strong>Copias de seguridad</strong>: para poder recuperar la información ante una falla, guardamos copias
+              de la base de datos y conservamos las 10 más recientes. Además, el proveedor de la base mantiene un
+              historial de cambios de las últimas 6 horas. Si eliminás tu cuenta, tus datos pueden seguir en esas copias
+              hasta que se reemplacen por otras más nuevas; mientras tanto no se usan para nada más y, si alguna vez
+              hubiera que restaurar una copia, tu cuenta se vuelve a eliminar.
             </li>
           </ul>
         </section>
