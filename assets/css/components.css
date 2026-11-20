@@ -2758,3 +2758,132 @@ fieldset.form-field legend {
     font-size: 0.6875rem;
   }
 }
+
+/* ============================================
+   Página Mi perfil
+   ============================================ */
+
+.perfil_tarjeta {
+  padding: var(--space-6);
+  background-color: rgba(20, 18, 20, 0.85);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.perfil_tarjeta h2 {
+  margin-bottom: var(--space-4);
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+}
+
+.perfil_tarjeta > p {
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-sm);
+}
+
+/* Zona de riesgo: el borde rojo avisa antes de leer */
+.perfil_tarjeta--peligro {
+  border-color: rgba(217, 74, 74, 0.45);
+}
+
+.perfil_confirmar {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-soft);
+}
+
+.perfil_acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+@media (max-width: 560px) {
+  .perfil_tarjeta {
+    padding: var(--space-4);
+  }
+}
+
+/* ============================================
+   Filtros del buscador del inicio
+   ============================================ */
+
+.search-filtros {
+  margin-top: var(--space-3);
+}
+
+.search-filtros summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  transition: border-color var(--transition), color var(--transition);
+}
+
+.search-filtros summary::-webkit-details-marker {
+  display: none;
+}
+
+.search-filtros summary::after {
+  content: "\25BE";
+  transition: transform var(--transition);
+}
+
+.search-filtros[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.search-filtros summary:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.search-filtros summary:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+/* Número de filtros activos, junto a la palabra "Filtros" */
+.search-filtros_cantidad {
+  min-width: 1.4rem;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--gradient-primary);
+  color: #FFF4F2;
+  font-size: var(--fs-xs);
+  text-align: center;
+}
+
+.search-filtros_panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  background-color: rgba(20, 18, 20, 0.85);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+}
+
+.search-filtros_panel select {
+  padding-block: var(--space-2);
+}
+
+.search-filtros_pie {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.search-filtros_pie .field-hint {
+  margin: 0;
+}

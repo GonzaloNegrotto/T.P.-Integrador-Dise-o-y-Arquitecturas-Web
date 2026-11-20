@@ -543,6 +543,132 @@ def limpiar_cache():
     return jsonify(entradas_eliminadas=cantidad)
 
 
+# ============================================
+# Perfil de usuario
+# RF15 y Ley 25.326, art. 16 (rectificación y supresión): la persona puede
+# corregir sus datos, cambiar su contraseña y eliminar su cuenta.
+# Cambiar el email o la contraseña y borrar la cuenta exigen la contraseña
+# actual, para que una sesión abierta en una PC ajena no alcance para hacerlo.
+# ============================================
+
+# Géneros que se ofrecen en el registro y en el perfil.
+GENEROS_PERFIL = ("Acción", "Aventura", "Animación", "Comedia", "Drama", "Terror", "Ciencia ficción", "Romance")
+
+
+def exigir_password_actual(usuario, datos):
+    """Corta con 400 si falta la contraseña actual y con 403 si no es la correcta.
+
+    Se usa 403 y no 401 a propósito: 401 significa "no hay sesión", y acá la
+    sesión es válida; lo que falló es la confirmación.
+    """
+    password = str(datos.get("password_actual", ""))
+    if not password:
+        raise ErrorApi(400, "Ingresá tu contraseña actual para confirmar el cambio.")
+    if not check_password_hash(usuario.password_hash, password):
+        raise ErrorApi(403, "La contraseña actual no es correcta.")
+
+
+def validar_generos_perfil(generos):
+    """Devuelve la lista de géneros sin repetidos y con su nombre canónico."""
+    if not isinstance(generos, list) or not all(isinstance(g, str) for g in generos):
+        raise ErrorApi(400, "Elegí entre 1 y 5 géneros favoritos.")
+    nombres = {normalizar_texto(nombre): nombre for nombre in GENEROS_PERFIL}
+    elegidos = []
+    for genero in generos:
+        nombre = nombres.get(normalizar_texto(genero))
+        if nombre is None:
+            raise ErrorApi(400, f"El género «{genero[:30]}» no es válido.")
+        if nombre not in elegidos:
+            elegidos.append(nombre)
+    if not 1 <= len(elegidos) <= 5:
+        raise ErrorApi(400, "Elegí entre 1 y 5 géneros favoritos.")
+    return elegidos
+
+
+@app.put("/api/perfil")
+def actualizar_perfil():
+    """Corrige el nombre, el email, la fecha de nacimiento y los géneros favoritos."""
+    usuario = usuario_de_la_sesion()
+    datos = request.get_json(silent=True) or {}
+    nombre = str(datos.get("nombre", "")).strip()
+    email = str(datos.get("email", "")).strip().lower()
+    nacimiento = str(datos.get("nacimiento", ""))
+
+    if not nombre or len(nombre) > 40:
+        raise ErrorApi(400, "El nombre es obligatorio y debe tener hasta 40 caracteres.")
+    if "@" not in email or len(email) > 255:
+        raise ErrorApi(400, "Ingresá un email válido.")
+    try:
+        fecha_nacimiento = date.fromisoformat(nacimiento)
+    except ValueError:
+        raise ErrorApi(400, "La fecha de nacimiento no es válida.")
+    if fecha_nacimiento >= date.today():
+        raise ErrorApi(400, "La fecha de nacimiento debe ser anterior a hoy.")
+    if calcular_edad(fecha_nacimiento) < EDAD_MINIMA:
+        raise ErrorApi(400, f"Tenés que tener al menos {EDAD_MINIMA} años.")
+    generos = validar_generos_perfil(datos.get("generos"))
+
+    if email != usuario.email:
+        exigir_password_actual(usuario, datos)
+
+    usuario.nombre = nombre
+    usuario.email = email
+    usuario.fecha_nacimiento = fecha_nacimiento
+    usuario.generos = generos
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ErrorApi(409, "Ya existe una cuenta registrada con ese email.")
+    return jsonify(usuario=respuesta_usuario(usuario))
+
+
+@app.put("/api/perfil/password")
+def cambiar_password():
+    """Cambia la contraseña. La sesión actual sigue abierta."""
+    usuario = usuario_de_la_sesion()
+    datos = request.get_json(silent=True) or {}
+    exigir_password_actual(usuario, datos)
+
+    nueva = str(datos.get("password_nueva", ""))
+    if len(nueva) < 8:
+        raise ErrorApi(400, "La contraseña nueva debe tener al menos 8 caracteres.")
+    if check_password_hash(usuario.password_hash, nueva):
+        raise ErrorApi(400, "La contraseña nueva tiene que ser distinta de la actual.")
+
+    usuario.password_hash = generate_password_hash(nueva)
+    db.session.commit()
+    return jsonify(mensaje="Contraseña actualizada.")
+
+
+@app.delete("/api/perfil")
+def eliminar_cuenta():
+    """Borra la cuenta y todo lo asociado (sus favoritas) y cierra la sesión."""
+    usuario = usuario_de_la_sesion()
+    datos = request.get_json(silent=True) or {}
+    exigir_password_actual(usuario, datos)
+
+    # Nunca puede quedar el sistema sin un superadministrador activo.
+    if usuario.rol.nombre == "superadministrador":
+        superadmins = db.session.scalar(
+            db.select(func.count(Usuario.id)).where(Usuario.rol_id == usuario.rol_id, Usuario.estado == "activo")
+        )
+        if superadmins <= 1:
+            raise ErrorApi(409, "No podés eliminar la cuenta del único superadministrador. Asigná ese rol a otra persona primero.")
+
+    # Queda constancia en la auditoría, sin datos personales: solo el número de cuenta que se eliminó.
+    # El usuario es None porque la cuenta deja de existir; la base pone NULL en las filas que la mencionaban.
+    registrar_auditoria(None, "eliminar cuenta", "usuarios", usuario.id, {"origen": "perfil"})
+
+    # La base ya borra las favoritas en cascada; se hace explícito para que
+    # también funcione en motores que no aplican claves foráneas por defecto.
+    db.session.execute(db.delete(Favorito).where(Favorito.usuario_id == usuario.id))
+    db.session.delete(usuario)
+    db.session.commit()
+    session.clear()
+    return jsonify(mensaje="Tu cuenta fue eliminada.")
+
+
 @app.get("/api/tendencias")
 def tendencias():
     periodo = request.args.get("periodo", "week")
