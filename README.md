@@ -80,6 +80,8 @@ repositorio**.
 | `API_READ_ACCESS_TOKEN` | Token con el que el servidor consulta TMDB | Crear una cuenta en [themoviedb.org](https://www.themoviedb.org/signup), ir a *Configuración → API*, solicitar una clave (uso educativo) y copiar el **API Read Access Token** (el texto largo que empieza con `eyJ`) |
 | `API_KEY` | Clave v3 de TMDB | En la misma pantalla, la **API Key** corta. El servidor no la usa (trabaja con el token); se deja como referencia y puede quedar vacía |
 | `SECRET_KEY` | Clave para firmar la cookie de sesión | Generarla con el comando de abajo y pegar el resultado |
+| `CHATBOT_API_KEY` | *(Opcional)* Key de Gemini para que el chatbot responda con IA | Ver la sección [Chatbot](#8-chatbot-asistente-de-películas). Si queda vacía, el chatbot funciona igual, con respuestas automáticas |
+| `CHATBOT_MODELO` | *(Opcional)* Modelo de Gemini | Vacío usa `gemini-3.5-flash-lite` |
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
@@ -92,6 +94,8 @@ API_READ_ACCESS_TOKEN=eyJhbGciOiJIUzI1NiJ9.ejemplo.ejemplo
 API_KEY=
 DATABASE_URL=postgresql://usuario:contraseña@ep-ejemplo.sa-east-1.aws.neon.tech/neondb?sslmode=require
 SECRET_KEY=3f6c...64 caracteres hexadecimales...
+CHATBOT_API_KEY=
+CHATBOT_MODELO=
 ```
 
 ### 2.5. Crear las tablas de la base de datos
@@ -167,6 +171,7 @@ Reglas que valida el servidor (no solo la interfaz):
 | Registro, inicio de sesión y Mi perfil | `pages/registro.html`, `pages/login.html`, `pages/perfil.html` |
 | Política de privacidad | `pages/privacidad.html` |
 | Panel de administración | `admin/dashboard.html` |
+| Asistente de películas (chatbot) | Botón 💬 abajo a la derecha, en todas las páginas |
 
 ## 5. Respaldo de la base de datos
 
@@ -194,6 +199,7 @@ flask --app Back/app.py respaldo restaurar respaldos/medialens-AAAAMMDD-HHMMSS.j
 | Seguridad (art. 9) | Contraseñas guardadas solo como hash con sal (`werkzeug.security.generate_password_hash`); cookie de sesión firmada, `HttpOnly` y `SameSite=Lax`; credenciales fuera del código (`.env`) |
 | Rectificación y supresión (art. 16) | En Mi perfil la persona corrige sus datos y elimina su cuenta (junto con sus favoritas) |
 | Minimización | La ubicación para buscar cines no se guarda ni se asocia a la cuenta; la auditoría no copia datos personales |
+| Chatbot | Las conversaciones no se guardan en la base ni en los registros del servidor (los errores se registran sin el texto del usuario). El panel avisa que no se compartan datos personales y la política informa el envío de las preguntas a Google |
 
 ## 7. Arquitectura
 
@@ -202,20 +208,58 @@ flask --app Back/app.py respaldo restaurar respaldos/medialens-AAAAMMDD-HHMMSS.j
 - **Servidor Flask** (`Back/app.py`). Sirve el sitio, expone la API y hace de intermediario con TMDB: el token
   nunca llega al navegador. Guarda en memoria (caché) las respuestas de TMDB para responder más rápido y para
   seguir funcionando si TMDB falla.
-- **Servicios externos.** TMDB (películas) y Nominatim/OpenStreetMap (cines y direcciones).
+- **Servicios externos.** TMDB (películas), Nominatim/OpenStreetMap (cines y direcciones) y, opcionalmente,
+  Google Gemini (redacción de las respuestas del chatbot). Todos se consultan desde el servidor.
 - **Base relacional.** PostgreSQL con SQLAlchemy (`Back/modeloDatos.py`) y migraciones versionadas con
   Flask-Migrate (`migrations/`).
 
-El diagrama entidad-relación está en [`DER-MediaLens.png`](DER-MediaLens.png).
+## 8. Chatbot (asistente de películas)
 
-## 8. Limitaciones conocidas
+El botón 💬 abre un chat que responde preguntas sobre películas con datos de TMDB (RF12). Funciona así:
+
+1. El servidor (`POST /api/chatbot`) interpreta la pregunta y busca datos en TMDB: un género, las tendencias o una
+   película por título (con su detalle y reparto).
+2. Con una key configurada, le pasa esos datos a **Gemini** (`gemini-3.5-flash-lite`), con la instrucción de
+   responder en español rioplatense, en forma breve, solo sobre películas y **usando únicamente esos datos**.
+3. Las películas que menciona la respuesta aparecen como tarjetas; al tocarlas se abre su detalle. Solo se
+   muestran películas que vinieron de TMDB, así que el chatbot no puede inventar una tarjeta.
+
+### Cómo obtener la key de Gemini
+
+1. Entrar a [Google AI Studio](https://aistudio.google.com/apikey) con una cuenta de Google y aceptar los términos.
+2. Crear una key (*Create API key*) y copiarla.
+3. Pegarla en el `.env` como `CHATBOT_API_KEY=...` y reiniciar el servidor (`Ctrl + C` y `python Back/app.py`).
+
+La capa gratuita alcanza para probar el chatbot. En esa capa, Google puede usar el contenido de las preguntas para
+mejorar sus productos: por eso el chat avisa que no se escriban datos personales.
+
+### Sin key (o si la IA falla)
+
+El chatbot **funciona igual**: si no hay key, si Gemini devuelve un error o si tarda más de 10 segundos, responde
+con reglas a partir de los mismos datos de TMDB. Esas respuestas se marcan con «Respuesta automática, sin IA».
+Así se puede probar sin crear ninguna cuenta.
+
+### Ejemplos de preguntas
+
+- «Recomendame una de terror» (también comedia, drama, ciencia ficción, animadas, de amor, de suspenso…)
+- «¿Qué es tendencia esta semana?» o «Recomendame algo»
+- «¿De qué trata Interstellar?», «¿Quién actúa en El Padrino?», «Hablame de Titanic»
+- «Hola» o «¿Qué podés hacer?»: muestra una ayuda con ejemplos
+
+### Límites
+
+- Preguntas de hasta 300 caracteres; como contexto se envían los últimos 6 mensajes de la conversación.
+- 10 preguntas por minuto por cuenta (o por dirección IP, sin sesión). Después responde «Hiciste muchas
+  preguntas seguidas» hasta que pase el minuto.
+- La conversación vive solo en la página abierta: se borra al recargar o con el botón «Limpiar».
+
+## 9. Limitaciones conocidas
 
 - Solo se trabaja con **películas**: las series no están incluidas.
 - La **asociación entre película y cine** (RF09: qué cines proyectan una película) no está implementada. La página
   de cines muestra los cines cercanos y enlaza a su sitio para consultar la cartelera.
-- El botón del **chatbot** es un acceso reservado: muestra un aviso de que la función no está disponible.
 
-## 9. Problemas frecuentes
+## 10. Problemas frecuentes
 
 | Síntoma | Causa y solución |
 | --- | --- |
@@ -228,3 +272,5 @@ El diagrama entidad-relación está en [`DER-MediaLens.png`](DER-MediaLens.png).
 | El panel dice «No tenés permisos» | La cuenta tiene rol *usuario*: promoverla con `crear-admin` o desde otra cuenta administradora |
 | «Usar mi ubicación» no funciona | El navegador solo permite la ubicación en `localhost` o con HTTPS, y hay que aceptar el permiso. Se puede buscar escribiendo una dirección |
 | `Address already in use` o el puerto 5000 ocupado | Ya hay otra instancia del servidor abierta: cerrarla con `Ctrl + C` |
+| El chatbot siempre dice «Respuesta automática, sin IA» | No hay `CHATBOT_API_KEY` en el `.env`, el servidor no se reinició después de agregarla, la key es inválida o se agotó la cuota gratuita. La consola del servidor muestra el motivo |
+| El chatbot responde «Hiciste muchas preguntas seguidas» | Se superó el límite de 10 preguntas por minuto: esperar el tiempo que indica |

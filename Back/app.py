@@ -14,15 +14,18 @@ Uso (con el venv activado, desde la raíz del proyecto):
 y abrir http://localhost:5000
 """
 
+import json
 import math
 import mimetypes
 import os
+import re
 import threading
 import time
 import unicodedata
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
+from difflib import SequenceMatcher
 from functools import partial
 from itertools import zip_longest
 from pathlib import Path
@@ -840,12 +843,9 @@ def generos():
     return jsonify(generos=lista)
 
 
-@app.get("/api/descubrir")
-def descubrir():
-    genero = request.args.get("genero", type=int)
-    if not genero:
-        raise ErrorApi(400, "Falta indicar un género válido.")
-    datos = con_cache(
+def datos_descubrir(genero):
+    """Películas populares de un género (las usan /api/descubrir y el chatbot)."""
+    return con_cache(
         f"descubrir:{genero}",
         1800,
         lambda: consultar_tmdb(
@@ -858,6 +858,14 @@ def descubrir():
             },
         ),
     )
+
+
+@app.get("/api/descubrir")
+def descubrir():
+    genero = request.args.get("genero", type=int)
+    if not genero:
+        raise ErrorApi(400, "Falta indicar un género válido.")
+    datos = datos_descubrir(genero)
     return jsonify(total=datos.get("total_results", 0), resultados=listar_peliculas(datos))
 
 
@@ -900,13 +908,18 @@ def buscar():
     )
 
 
-@app.get("/api/pelicula/<int:id_pelicula>")
-def pelicula(id_pelicula):
-    datos = con_cache(
+def datos_pelicula(id_pelicula):
+    """Detalle y reparto de una película (los usan /api/pelicula y el chatbot)."""
+    return con_cache(
         f"pelicula:{id_pelicula}",
         3600,
         lambda: consultar_tmdb(f"/movie/{id_pelicula}", {"append_to_response": "credits"}),
     )
+
+
+@app.get("/api/pelicula/<int:id_pelicula>")
+def pelicula(id_pelicula):
+    datos = datos_pelicula(id_pelicula)
     if es_contenido_adulto(datos):
         raise ErrorApi(404, "No encontramos lo que buscabas.")
 
@@ -1673,6 +1686,425 @@ def mis_estadisticas():
         por_genero=[{"nombre": nombre, "cantidad": cantidad} for nombre, cantidad in generos.most_common()],
         por_decada=[{"decada": decada, "cantidad": cantidad} for decada, cantidad in sorted(decadas.items())],
     )
+
+
+# ============================================
+# Chatbot (RF12)
+# Responde preguntas sobre películas con datos de TMDB. Primero se arma un
+# contexto con las funciones de arriba (búsqueda, tendencias, géneros,
+# detalle) y después:
+#   - con CHATBOT_API_KEY en el .env, Gemini redacta la respuesta usando
+#     solo ese contexto;
+#   - sin key, o si Gemini falla o tarda, se responde por reglas.
+# Ley 25.326: las conversaciones no se guardan en la base ni en los logs.
+# El historial lo manda el navegador en cada pedido.
+# ============================================
+
+CHATBOT_API_KEY = os.getenv("CHATBOT_API_KEY")
+CHATBOT_MODELO = os.getenv("CHATBOT_MODELO") or "gemini-3.5-flash-lite"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
+TIMEOUT_IA = (3.05, 10)  # segundos: (conectar, esperar respuesta)
+
+MAX_MENSAJE = 300
+MAX_TURNOS_HISTORIAL = 6
+MAX_TEXTO_TURNO = 600
+PELICULAS_EN_CONTEXTO = 8
+PELICULAS_EN_RESPUESTA = 4
+PEDIDOS_POR_MINUTO = 10
+
+# Sesión aparte de la de TMDB: no lleva el token de TMDB en los encabezados.
+sesion_ia = requests.Session()
+
+PROMPT_SISTEMA = """Sos el asistente de MediaLens, un sitio para buscar y descubrir películas.
+Reglas:
+- Respondé en español rioplatense (voseo), de forma breve: 2 a 4 oraciones.
+- Solo hablás de películas y del uso de MediaLens. Si te preguntan otra cosa, decí amablemente que solo podés ayudar con películas.
+- Usá únicamente los datos del bloque DATOS DE TMDB y la información del sitio. No inventes títulos, años, actores, directores ni puntajes.
+- Si los datos no alcanzan para responder, decilo con claridad y sugerí cómo buscar en el sitio.
+- Si "coincidencia_aproximada" es true, el título se escribió distinto: empezá aclarando qué película entendiste (por ejemplo: «Supongo que te referís a Interestelar (2014).»).
+- No pidas ni repitas datos personales.
+- Respondé solo con un objeto JSON: {"respuesta": "texto", "ids": [ids de las películas de DATOS DE TMDB que mencionás, máximo 4]}.
+
+Información del sitio:
+- Inicio: buscador por título con filtros (género, año, idioma, puntaje), tendencias del día y de la semana, Top 5 y exploración por género.
+- Rankings, Estadísticas y Cines cercanos (por ubicación, con enlace al sitio de cada cine para reservar).
+- Con una cuenta: Mis favoritas (el corazón de cada película), Recomendaciones personalizadas y Mi perfil.
+- Tocando una película se abre su detalle: sinopsis, reparto, dirección y duración."""
+
+# Palabras que identifican cada género de TMDB (sin tildes; se aceptan plurales).
+PALABRAS_GENERO = {
+    28: ("accion",),
+    12: ("aventura",),
+    16: ("animacion", "animada", "animado", "dibujos"),
+    35: ("comedia", "graciosa", "gracioso"),
+    80: ("crimen", "policial"),
+    99: ("documental",),
+    18: ("drama", "dramatica"),
+    10751: ("familia", "familiar", "infantil"),
+    14: ("fantasia",),
+    36: ("historia", "historica"),
+    27: ("terror", "miedo", "horror"),
+    10402: ("musica", "musical"),
+    9648: ("misterio",),
+    10749: ("romance", "romantica", "romantico", "amor"),
+    878: ("ciencia ficcion", "sci-fi", "scifi", "futurista"),
+    53: ("suspenso", "suspense", "thriller"),
+    10752: ("guerra", "belica"),
+    37: ("western", "vaqueros"),
+}
+NOMBRES_GENERO = {
+    28: "Acción", 12: "Aventura", 16: "Animación", 35: "Comedia", 80: "Crimen", 99: "Documental",
+    18: "Drama", 10751: "Familia", 14: "Fantasía", 36: "Historia", 27: "Terror", 10402: "Música",
+    9648: "Misterio", 10749: "Romance", 878: "Ciencia ficción", 53: "Suspense", 10752: "Bélica", 37: "Western",
+}
+PATRONES_GENERO = {
+    id_genero: re.compile(r"\b(?:" + "|".join(re.escape(p) for p in palabras) + r")(?:s|es)?\b")
+    for id_genero, palabras in PALABRAS_GENERO.items()
+}
+# "de qué trata X", "quién actúa en X", "hablame de X"...: lo que sigue es el título.
+PATRON_PELICULA = re.compile(
+    r"(?:de qu[eé] (?:se )?trata|de qu[eé] va|sinopsis de|resumen de|"
+    r"qui[eé]n(?:es)? (?:act[uú]an?|trabajan?|salen?|dirigi[oó]|dirige)(?: en)?|qui[eé]n es el director de|"
+    r"h[aá]blame (?:de|sobre)|contame (?:de|sobre)|info(?:rmaci[oó]n)? (?:de|sobre)|qu[eé] sab[eé]s (?:de|sobre)|datos de)"
+    r"\s+(?:la (?:pel[ií](?:cula)?\s+)?|el film\s+)?(.+)"
+)
+PATRON_COMILLAS = re.compile(r"[«\"“'‘]([^«»\"“”'‘’]{2,80})[»\"”'’]")
+PATRON_TENDENCIA = re.compile(r"\b(tendencias?|populares?|de moda|se est[aá] viendo|lo m[aá]s visto|estrenos?)\b")
+PATRON_RECOMENDAR = re.compile(r"\b(recomend|suger|que (?:veo|puedo ver|miro)|algo para ver)")
+PATRON_AYUDA = re.compile(r"^(hola|buenas|buen d[ií]a|ayuda|help)\b|qu[eé] (?:pod[eé]s|sab[eé]s) hacer|c[oó]mo funciona|qui[eé]n sos")
+
+_pedidos_chatbot = {}  # clave (cuenta o IP) -> momentos de los pedidos del último minuto
+_candado_chatbot = threading.Lock()
+
+
+class ErrorIA(Exception):
+    """La IA no pudo responder. El motivo va al log; nunca el texto del usuario."""
+
+
+def controlar_limite_chatbot():
+    """Máximo PEDIDOS_POR_MINUTO por cuenta (o por IP, si no hay sesión)."""
+    clave = f"usuario:{session['usuario_id']}" if session.get("usuario_id") else f"ip:{request.remote_addr}"
+    ahora = time.monotonic()
+    with _candado_chatbot:
+        recientes = [t for t in _pedidos_chatbot.get(clave, []) if ahora - t < 60]
+        if len(recientes) >= PEDIDOS_POR_MINUTO:
+            espera = math.ceil(60 - (ahora - recientes[0]))
+            raise ErrorApi(429, f"Hiciste muchas preguntas seguidas. Esperá {espera} segundos y volvé a intentar.")
+        recientes.append(ahora)
+        _pedidos_chatbot[clave] = recientes
+        if len(_pedidos_chatbot) > 1000:  # limpieza simple de claves viejas
+            for vieja in [c for c, ts in _pedidos_chatbot.items() if ahora - ts[-1] >= 60]:
+                del _pedidos_chatbot[vieja]
+
+
+def leer_pedido_chatbot():
+    """Valida {mensaje, historial}. Del historial se toman los últimos turnos válidos."""
+    datos = request.get_json(silent=True)
+    if not isinstance(datos, dict):
+        raise ErrorApi(400, "El pedido no es válido.")
+    mensaje = datos.get("mensaje")
+    if not isinstance(mensaje, str) or not mensaje.strip():
+        raise ErrorApi(400, "Escribí una pregunta.")
+    mensaje = " ".join(mensaje.split())
+    if len(mensaje) > MAX_MENSAJE:
+        raise ErrorApi(400, f"La pregunta es demasiado larga (máximo {MAX_MENSAJE} caracteres).")
+
+    historial = datos.get("historial") or []
+    if not isinstance(historial, list):
+        raise ErrorApi(400, "El historial no es válido.")
+    turnos = []
+    for turno in historial[-MAX_TURNOS_HISTORIAL:]:
+        if (
+            isinstance(turno, dict)
+            and turno.get("rol") in ("usuario", "asistente")
+            and isinstance(turno.get("texto"), str)
+            and turno["texto"].strip()
+        ):
+            turnos.append({"rol": turno["rol"], "texto": turno["texto"].strip()[:MAX_TEXTO_TURNO]})
+    return mensaje, turnos
+
+
+def interpretar_mensaje(mensaje):
+    """Decide qué datos buscar: una película, un género, las tendencias o la ayuda."""
+    minusculas = mensaje.casefold()
+    normal = normalizar_texto(mensaje)
+
+    comillas = PATRON_COMILLAS.search(mensaje)
+    if comillas:
+        return {"tipo": "pelicula", "titulo": comillas.group(1).strip()}
+    pedido = PATRON_PELICULA.search(minusculas)
+    if pedido:
+        # El título termina en el primer signo: "¿De qué trata Up? Me la recomendaron" → "up".
+        titulo = re.split(r"[?¡!.,;:]", pedido.group(1))[0].strip(" ¿")
+        if len(titulo) >= 2:
+            return {"tipo": "pelicula", "titulo": titulo}
+
+    for id_genero, patron in PATRONES_GENERO.items():
+        if patron.search(normal):
+            return {"tipo": "genero", "genero": id_genero}
+    if PATRON_TENDENCIA.search(normal) or PATRON_RECOMENDAR.search(normal):
+        return {"tipo": "tendencias"}
+    if PATRON_AYUDA.search(normal):
+        return {"tipo": "ayuda"}
+    # Un mensaje corto que no coincide con nada puede ser directamente un título ("Interstellar").
+    if len(mensaje.split()) <= 5:
+        return {"tipo": "pelicula", "titulo": mensaje.strip(" ¿?¡!.,;:"), "supuesto": True}
+    return {"tipo": "general"}
+
+
+def pelicula_para_contexto(pelicula):
+    return {
+        "id": pelicula["id"],
+        "titulo": pelicula["titulo"],
+        "anio": pelicula["anio"],
+        "puntaje": pelicula["puntaje"],
+        "generos": pelicula["generos"],
+        "sinopsis": pelicula["sinopsis"][:220],
+    }
+
+
+def detalle_para_contexto(datos):
+    creditos = datos.get("credits") or {}
+    fecha = datos.get("release_date") or ""
+    return {
+        "id": datos["id"],
+        "titulo": datos.get("title") or datos.get("original_title") or "Sin título",
+        "titulo_original": datos.get("original_title"),
+        "anio": fecha[:4] or None,
+        "duracion_min": datos.get("runtime") or None,
+        "puntaje": round(datos.get("vote_average") or 0, 1),
+        "generos": [g["name"] for g in datos.get("genres", [])],
+        "sinopsis": (datos.get("overview") or "")[:600],
+        "direccion": [c["name"] for c in creditos.get("crew", []) if c.get("job") == "Director"],
+        "reparto": [c["name"] for c in creditos.get("cast", [])[:5]],
+    }
+
+
+PARECIDO_EXACTO = 0.9  # desde acá, el título escrito se toma como el de la película
+PARECIDO_MINIMO = 0.8  # por debajo, no se considera la misma película
+
+
+def parecido_titulo(buscado, pelicula):
+    """Entre 0 y 1: cuánto se parece lo escrito al título en español o al original."""
+    buscado = normalizar_texto(buscado)
+    return max(
+        SequenceMatcher(None, buscado, normalizar_texto(titulo)).ratio()
+        for titulo in (pelicula.get("title") or "", pelicula.get("original_title") or "")
+    )
+
+
+def variantes_titulo(titulo):
+    """Comienzos de palabra para reintentar la búsqueda.
+
+    TMDB no tolera errores de tipeo ("interestellar" no encuentra nada), pero
+    busca por el comienzo de las palabras ("interes" sí encuentra Interestelar).
+    """
+    palabras = normalizar_texto(titulo).split()
+    recortar = lambda palabra: palabra if len(palabra) <= 3 else palabra[:max(4, round(len(palabra) * 0.55))]
+    variantes = [" ".join(recortar(p) for p in palabras), recortar(max(palabras, key=len))]
+    return [v for v in dict.fromkeys(variantes) if v != normalizar_texto(titulo)]
+
+
+def buscar_titulo(titulo):
+    """Busca la película que más se parece al título escrito, tolerando errores de tipeo.
+
+    Devuelve (la elegida, los resultados con la elegida primero, si es aproximada),
+    con los datos tal como los da TMDB, o (None, [], False) si no hay ninguna.
+    """
+    exactos = [p for p in pagina_busqueda(titulo, None, 1).get("results", []) if not es_contenido_adulto(p)]
+    candidatas = {p["id"]: p for p in exactos}
+    # Más parecida primero; a igual parecido (remakes), la más votada.
+    orden = lambda p: (round(parecido_titulo(titulo, p), 2), p.get("vote_count") or 0)
+
+    mejor = max(exactos, key=orden, default=None)
+    if mejor is None or parecido_titulo(titulo, mejor) < PARECIDO_EXACTO:
+        for variante in variantes_titulo(titulo):
+            for pelicula in pagina_busqueda(variante, None, 1).get("results", []):
+                if not es_contenido_adulto(pelicula):
+                    candidatas.setdefault(pelicula["id"], pelicula)
+        mejor = max(candidatas.values(), key=orden, default=None)
+
+    if mejor is None or parecido_titulo(titulo, mejor) < PARECIDO_MINIMO:
+        if not exactos:
+            return None, [], False
+        mejor = exactos[0]  # ninguna se parece lo suficiente: se respeta el orden de TMDB
+    resto = [p for p in exactos if p["id"] != mejor["id"]]
+    return mejor, [mejor, *resto], parecido_titulo(titulo, mejor) < PARECIDO_EXACTO
+
+
+def buscar_contexto(intencion):
+    """Arma el contexto con datos de TMDB. Si TMDB falla, se propaga el ErrorApi."""
+    tipo = intencion["tipo"]
+    contexto = {"consulta": tipo, "peliculas": [], "detalle": None}
+    resultados = []
+
+    if tipo == "pelicula":
+        contexto["titulo_buscado"] = intencion["titulo"]
+        mejor, crudas, aproximada = buscar_titulo(intencion["titulo"][:100])
+        resultados = listar_peliculas({"results": crudas})
+        if mejor:
+            contexto["coincidencia_aproximada"] = aproximada
+            detalle = datos_pelicula(mejor["id"])
+            if not es_contenido_adulto(detalle):
+                contexto["detalle"] = detalle_para_contexto(detalle)
+    elif tipo == "genero":
+        contexto["genero"] = mapa_generos().get(intencion["genero"]) or NOMBRES_GENERO[intencion["genero"]]
+        resultados = listar_peliculas(datos_descubrir(intencion["genero"]))
+    elif tipo in ("tendencias", "general"):
+        datos = con_cache("tendencias:week", 600, lambda: consultar_tmdb("/trending/movie/week"))
+        resultados = listar_peliculas(datos)
+
+    contexto["peliculas"] = [pelicula_para_contexto(p) for p in resultados[:PELICULAS_EN_CONTEXTO]]
+    # Los datos que necesita la tarjeta del frontend (no se le pasan a la IA).
+    tarjetas = {p["id"]: {"id": p["id"], "titulo": p["titulo"], "anio": p["anio"], "poster": p["poster"]}
+                for p in resultados[:PELICULAS_EN_CONTEXTO]}
+    return contexto, tarjetas
+
+
+# ---------- Respuesta con IA (Gemini) ----------
+
+def armar_conversacion(mensaje, historial, contexto):
+    """Turnos para Gemini: alternados, empezando por el usuario y terminando con la pregunta actual."""
+    contenidos = []
+    for turno in historial:
+        rol = "user" if turno["rol"] == "usuario" else "model"
+        if contenidos and contenidos[-1]["role"] == rol:
+            contenidos[-1]["parts"][0]["text"] += "\n" + turno["texto"]
+        elif contenidos or rol == "user":
+            contenidos.append({"role": rol, "parts": [{"text": turno["texto"]}]})
+    if contenidos and contenidos[-1]["role"] == "user":
+        contenidos.pop()  # una pregunta anterior que quedó sin respuesta
+    pregunta = f"DATOS DE TMDB (JSON):\n{json.dumps(contexto, ensure_ascii=False)}\n\nPREGUNTA: {mensaje}"
+    contenidos.append({"role": "user", "parts": [{"text": pregunta}]})
+    return contenidos
+
+
+def preguntar_a_gemini(mensaje, historial, contexto):
+    """Devuelve (respuesta, ids) o lanza ErrorIA. No registra el texto del usuario."""
+    cuerpo = {
+        "systemInstruction": {"parts": [{"text": PROMPT_SISTEMA}]},
+        "contents": armar_conversacion(mensaje, historial, contexto),
+        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 800, "responseMimeType": "application/json"},
+    }
+    try:
+        respuesta = sesion_ia.post(
+            GEMINI_URL.format(modelo=CHATBOT_MODELO),
+            headers={"x-goog-api-key": CHATBOT_API_KEY},
+            json=cuerpo,
+            timeout=TIMEOUT_IA,
+        )
+    except requests.exceptions.Timeout:
+        raise ErrorIA("tiempo de espera agotado")
+    except requests.exceptions.RequestException as error:
+        raise ErrorIA(f"sin conexión ({error.__class__.__name__})")
+
+    if respuesta.status_code in (401, 403):
+        log.error("Gemini rechazó la key (%s). Revisá CHATBOT_API_KEY en el .env.", respuesta.status_code)
+        raise ErrorIA("key rechazada")
+    if not respuesta.ok:
+        raise ErrorIA(f"HTTP {respuesta.status_code}")
+
+    motivo = "sin candidatos"
+    try:
+        candidato = respuesta.json()["candidates"][0]
+        motivo = candidato.get("finishReason") or "sin motivo"
+        partes = candidato["content"]["parts"]
+        texto = "".join(p.get("text", "") for p in partes if not p.get("thought"))
+        texto = re.sub(r"^```(?:json)?\s*|\s*```$", "", texto.strip())
+        datos = json.loads(texto)
+        respuesta_ia = str(datos["respuesta"]).strip()
+        ids = [int(i) for i in datos.get("ids") or [] if str(i).isdigit()]
+    except (ValueError, KeyError, IndexError, TypeError):
+        raise ErrorIA(f"respuesta con formato inválido ({motivo})")
+    if not respuesta_ia:
+        raise ErrorIA("respuesta vacía")
+    return respuesta_ia[:1200], ids
+
+
+# ---------- Respuesta sin IA (reglas) ----------
+
+def describir_pelicula_breve(pelicula):
+    partes = [f"«{pelicula['titulo']}»"]
+    if pelicula.get("anio"):
+        partes.append(f"({pelicula['anio']})")
+    if pelicula.get("puntaje"):
+        partes.append(f"★ {str(pelicula['puntaje']).replace('.', ',')}")
+    return " ".join(partes)
+
+
+def enumerar(elementos):
+    return elementos[0] if len(elementos) == 1 else ", ".join(elementos[:-1]) + " y " + elementos[-1]
+
+
+AYUDA_CHATBOT = (
+    "Puedo ayudarte a encontrar películas con datos de TMDB. Probá con: «Recomendame una de terror», "
+    "«¿Qué es tendencia esta semana?» o «¿De qué trata Interstellar?»."
+)
+
+
+def responder_con_reglas(intencion, contexto):
+    """Respuesta armada con plantillas a partir del mismo contexto de TMDB."""
+    peliculas = contexto["peliculas"][:PELICULAS_EN_RESPUESTA]
+    ids = [p["id"] for p in peliculas]
+    tipo = intencion["tipo"]
+
+    if tipo == "pelicula":
+        detalle = contexto["detalle"]
+        if not detalle:
+            if intencion.get("supuesto"):
+                return "No entendí bien la pregunta. " + AYUDA_CHATBOT, []
+            return (f"No encontré una película llamada «{intencion['titulo']}». Revisá cómo se escribe "
+                    "o probá con el título original."), []
+        texto = describir_pelicula_breve(detalle) + ". "
+        if contexto.get("coincidencia_aproximada"):
+            texto = f"Supongo que te referís a {texto}"
+        texto += detalle["sinopsis"] or "TMDB no tiene una sinopsis en español para esta película."
+        if detalle["direccion"]:
+            texto += f" Dirección: {enumerar(detalle['direccion'])}."
+        if detalle["reparto"]:
+            texto += f" Con {enumerar(detalle['reparto'][:3])}."
+        return texto, [detalle["id"]]
+    if tipo == "genero" and peliculas:
+        lista = enumerar([describir_pelicula_breve(p) for p in peliculas])
+        return f"Te recomiendo estas películas de {contexto['genero']}, de las más populares: {lista}.", ids
+    if tipo == "tendencias" and peliculas:
+        lista = enumerar([describir_pelicula_breve(p) for p in peliculas])
+        return f"Estas son algunas de las películas en tendencia esta semana: {lista}.", ids
+    if tipo == "ayuda":
+        return "¡Hola! " + AYUDA_CHATBOT, []
+    return "No entendí bien la pregunta. " + AYUDA_CHATBOT, []
+
+
+def elegir_tarjetas(respuesta, ids, tarjetas, buscar_titulos):
+    """Solo películas que estaban en el contexto: si la IA nombra otra, no aparece como tarjeta."""
+    elegidas = [i for i in dict.fromkeys(ids) if i in tarjetas]
+    if buscar_titulos:
+        # Si la IA nombra una película del contexto pero no la incluyó en ids, también se muestra.
+        normal = normalizar_texto(respuesta)
+        for id_pelicula, tarjeta in tarjetas.items():
+            if id_pelicula not in elegidas and len(tarjeta["titulo"]) > 3 and normalizar_texto(tarjeta["titulo"]) in normal:
+                elegidas.append(id_pelicula)
+    return [tarjetas[i] for i in elegidas[:PELICULAS_EN_RESPUESTA]]
+
+
+@app.post("/api/chatbot")
+def chatbot():
+    controlar_limite_chatbot()
+    mensaje, historial = leer_pedido_chatbot()
+    intencion = interpretar_mensaje(mensaje)
+    contexto, tarjetas = buscar_contexto(intencion)
+
+    modo, respuesta, ids = "reglas", None, []
+    if CHATBOT_API_KEY:
+        try:
+            respuesta, ids = preguntar_a_gemini(mensaje, historial, contexto)
+            modo = "ia"
+        except ErrorIA as error:
+            log.warning("Chatbot: la IA no respondió (%s); se responde sin IA.", error)
+    if modo == "reglas":
+        respuesta, ids = responder_con_reglas(intencion, contexto)
+
+    return jsonify(respuesta=respuesta, peliculas=elegir_tarjetas(respuesta, ids, tarjetas, modo == "ia"), modo=modo)
 
 
 # ============================================

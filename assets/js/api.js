@@ -160,6 +160,10 @@ export const api = {
   cambiarEstado: (idUsuario, estado) =>
     pedir(`/api/admin/usuarios/${encodeURIComponent(idUsuario)}/estado`, { metodo: "POST", cuerpo: { estado } }),
   vaciarCache: () => pedir("/api/admin/cache", { metodo: "DELETE" }),
+
+  // Chatbot: el historial lo guarda la página (en memoria) y se manda en cada pregunta
+  chatbot: (mensaje, historial, opciones) =>
+    pedir("/api/chatbot", { ...opciones, metodo: "POST", cuerpo: { mensaje, historial } }),
 };
 
 /* ---------- Imágenes de TMDB ---------- */

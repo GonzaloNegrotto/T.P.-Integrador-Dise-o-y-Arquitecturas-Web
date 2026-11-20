@@ -20,6 +20,11 @@ const enMisFavoritas = window.location.pathname.endsWith("/favoritas.html");
 
 export const esFavorita = (id) => estado.ids.has(Number(id));
 
+let iniciadas = false;
+
+/** true si la página ya activó los corazones (el chatbot lo usa al abrir un detalle). */
+export const favoritasIniciadas = () => iniciadas;
+
 /* ---------- Botones ---------- */
 
 /** Actualiza un botón de corazón según la película esté guardada o no. */
@@ -153,6 +158,10 @@ async function cargarSiHaySesion() {
  * defecto solo se cargan las favoritas para pintar los corazones.
  */
 export function iniciarFavoritas({ alCambiarSesion = cargarSiHaySesion } = {}) {
+  // Una sola vez por página: con dos listeners, cada clic guardaría y quitaría a la vez.
+  if (iniciadas) return;
+  iniciadas = true;
+
   // Delegación: un solo listener sirve para todas las tarjetas, aunque se creen después.
   document.addEventListener("click", (evento) => {
     const boton = evento.target.closest("[data-favorita-id]");

@@ -6,6 +6,7 @@
    chatbot.
    ============================================ */
 
+import { iniciarChatbot } from "./chatbot.js";
 import { mostrarToast } from "./ui.js";
 
 const normalizarRuta = (ruta) => ruta.replace(/index\.html$/, "");
@@ -200,13 +201,6 @@ function iniciarCabecera() {
   const actualizar = () => cabecera.classList.toggle("is-scrolled", window.scrollY > 8);
   window.addEventListener("scroll", actualizar, { passive: true });
   actualizar();
-}
-
-function iniciarChatbot() {
-  const boton = document.querySelector(".chatbot-toggle");
-  boton?.addEventListener("click", () => {
-    mostrarToast("El asistente de MediaLens va a estar disponible en una próxima entrega.");
-  });
 }
 
 /** Devuelve una promesa con el usuario de la sesión (o null si es un visitante). */
