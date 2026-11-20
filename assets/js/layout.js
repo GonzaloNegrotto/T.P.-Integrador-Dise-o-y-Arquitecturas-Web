@@ -10,6 +10,17 @@ import { mostrarToast } from "./ui.js";
 
 const normalizarRuta = (ruta) => ruta.replace(/index\.html$/, "");
 
+const ROLES_ADMINISTRATIVOS = ["administrador", "superadministrador"];
+
+/**
+ * Ruta relativa a un archivo del sitio, escrita desde la raíz
+ * ("pages/login.html", "admin/dashboard.html"). Funciona igual desde
+ * index.html, desde pages/ y desde admin/.
+ */
+export function rutaSitio(ruta) {
+  return /\/(pages|admin)\//.test(window.location.pathname) ? `../${ruta}` : ruta;
+}
+
 function obtenerAccionesSesion() {
   return document.querySelector(".navbar_actions");
 }
@@ -22,38 +33,40 @@ function avisarCambioDeSesion(usuario) {
   document.dispatchEvent(new CustomEvent("sesion:cambio", { detail: { usuario } }));
 }
 
-/** El link "Mis favoritas" del menú solo existe con la sesión iniciada. */
-function mostrarLinkFavoritas(visible) {
+/**
+ * Links del menú que dependen de la sesión: "Mis favoritas" (cualquier cuenta)
+ * y "Admin" (solo roles administrativos). Se agregan o quitan sin duplicarse.
+ */
+function mostrarLinkMenu(clave, texto, ruta, visible) {
   const lista = document.querySelector(".navbar_links");
   if (!lista) return;
-  const existente = lista.querySelector("[data-link-favoritas]");
+  const existente = lista.querySelector(`[data-link-sesion="${clave}"]`);
   if (!visible) {
     existente?.remove();
     return;
   }
   if (existente) return;
 
-  const enPagina = window.location.pathname.includes("/pages/");
   const link = document.createElement("a");
-  link.href = enPagina ? "favoritas.html" : "pages/favoritas.html";
-  link.textContent = "Mis favoritas";
+  link.href = rutaSitio(ruta);
+  link.textContent = texto;
   const item = document.createElement("li");
-  item.dataset.linkFavoritas = "";
+  item.dataset.linkSesion = clave;
   item.append(link);
   lista.append(item);
   marcarPaginaActual(lista);
 }
 
 function mostrarUsuario(usuario) {
-  mostrarLinkFavoritas(true);
+  mostrarLinkMenu("favoritas", "Mis favoritas", "pages/favoritas.html", true);
+  mostrarLinkMenu("admin", "Admin", "admin/dashboard.html", ROLES_ADMINISTRATIVOS.includes(usuario.rol));
   const acciones = obtenerAccionesSesion();
   if (!acciones) return;
 
   // El saludo lleva al perfil: ahí se corrigen los datos y se puede eliminar la cuenta.
-  const enPagina = window.location.pathname.includes("/pages/");
   const saludo = document.createElement("a");
   saludo.className = "navbar_usuario";
-  saludo.href = enPagina ? "perfil.html" : "pages/perfil.html";
+  saludo.href = rutaSitio("pages/perfil.html");
   saludo.textContent = `Hola, ${usuario.nombre}`;
   saludo.title = "Ir a mi perfil";
   if (window.location.pathname.endsWith("/perfil.html")) saludo.setAttribute("aria-current", "page");
@@ -68,19 +81,19 @@ function mostrarUsuario(usuario) {
 }
 
 function mostrarVisitante() {
-  mostrarLinkFavoritas(false);
+  mostrarLinkMenu("favoritas", "", "", false);
+  mostrarLinkMenu("admin", "", "", false);
   const acciones = obtenerAccionesSesion();
   if (!acciones) return;
-  const enPagina = window.location.pathname.includes("/pages/");
 
   const ingresar = document.createElement("a");
   ingresar.className = "btn btn-outline";
-  ingresar.href = enPagina ? "login.html" : "pages/login.html";
+  ingresar.href = rutaSitio("pages/login.html");
   ingresar.textContent = "Ingresar";
 
   const registrar = document.createElement("a");
   registrar.className = "btn btn-primary";
-  registrar.href = enPagina ? "registro.html" : "pages/registro.html";
+  registrar.href = rutaSitio("pages/registro.html");
   registrar.textContent = "Registrarse";
 
   acciones.replaceChildren(ingresar, registrar);

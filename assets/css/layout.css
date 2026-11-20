@@ -1088,3 +1088,57 @@
     padding-block: var(--space-8) var(--space-4);
   }
 }
+
+/* ============================================
+   Panel de administración
+   ============================================ */
+
+.admin {
+  padding-bottom: var(--space-16);
+}
+
+.admin_cabecera {
+  padding-block: var(--space-12) var(--space-6);
+}
+
+.admin_titulo {
+  margin-bottom: var(--space-3);
+}
+
+.admin_intro {
+  max-width: 46rem;
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+.admin_contenido {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.admin_contenido[hidden] {
+  display: none;
+}
+
+.admin_cache {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-8);
+}
+
+.admin_cache p {
+  max-width: 46rem;
+  margin: 0;
+}
+
+@media (max-width: 560px) {
+  .admin_cabecera {
+    padding-block: var(--space-8) var(--space-4);
+  }
+
+  .admin_cache .btn {
+    width: 100%;
+  }
+}

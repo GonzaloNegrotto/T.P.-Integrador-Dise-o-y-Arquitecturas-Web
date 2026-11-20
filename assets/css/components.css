@@ -2887,3 +2887,243 @@ fieldset.form-field legend {
 .search-filtros_pie .field-hint {
   margin: 0;
 }
+
+/* ============================================
+   Panel de administración
+   ============================================ */
+
+.admin_seccion h2 {
+  font-size: var(--fs-xl);
+}
+
+.admin_buscador {
+  display: flex;
+  gap: var(--space-2);
+  width: min(100%, 420px);
+}
+
+.admin_buscador input {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin_tabla {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.admin_tabla table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.admin_tabla th,
+.admin_tabla td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin_tabla th {
+  background-color: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin_tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin_tabla tbody tr:hover {
+  background-color: rgba(245, 241, 237, 0.02);
+}
+
+.admin_tabla .estado {
+  margin: var(--space-6) auto;
+}
+
+.admin_fila-estado:hover {
+  background: none;
+}
+
+.admin_nombre {
+  margin-right: var(--space-2);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.admin_email {
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+.admin_rol {
+  width: auto;
+  min-width: 11rem;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-sm);
+}
+
+.admin_rol:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin_estado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin_estado::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.admin_estado--activo {
+  background-color: rgba(78, 155, 114, 0.14);
+  color: var(--color-success-text);
+}
+
+.admin_estado--bloqueado {
+  background-color: rgba(217, 74, 74, 0.14);
+  color: var(--color-danger-text);
+}
+
+.admin_acciones {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin_nota {
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  cursor: help;
+}
+
+/* En celular, cada fila es una tarjeta: título de la celda a la izquierda, dato a la derecha */
+@media (max-width: 720px) {
+  .admin_tabla {
+    overflow: visible;
+    border: 0;
+    background: none;
+  }
+
+  .admin_tabla thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .admin_tabla table,
+  .admin_tabla tbody,
+  .admin_tabla tr,
+  .admin_tabla td {
+    display: block;
+  }
+
+  .admin_tabla tbody tr {
+    margin-bottom: var(--space-3);
+    padding: var(--space-2) 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-surface);
+  }
+
+  .admin_tabla td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-2) var(--space-4);
+    border: 0;
+    text-align: right;
+  }
+
+  .admin_tabla td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    color: var(--color-text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .admin_tabla .admin_fila-estado td {
+    display: block;
+  }
+
+  .admin_rol {
+    min-width: 0;
+    max-width: 60%;
+  }
+
+  .admin_buscador {
+    width: 100%;
+  }
+}
+
+/* ============================================
+   Diálogo de confirmación (modal.js → confirmar)
+   ============================================ */
+
+.modal.modal--confirmar {
+  width: min(460px, calc(100% - 32px));
+}
+
+.confirmar {
+  padding: var(--space-8) var(--space-6) var(--space-6);
+}
+
+.confirmar_titulo {
+  margin-bottom: var(--space-3);
+  font-size: var(--fs-xl);
+}
+
+.confirmar_mensaje {
+  margin-bottom: var(--space-6);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.confirmar_acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* El modal de detalle ocupa toda la pantalla en celular; el de confirmación no */
+@media (max-width: 720px) {
+  .modal.modal--confirmar {
+    width: calc(100% - 32px);
+    height: auto;
+    max-height: calc(100dvh - 48px);
+    margin: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+
+  .confirmar_acciones .btn {
+    flex: 1;
+  }
+}

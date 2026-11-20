@@ -4,6 +4,9 @@
    abrirla y se elimina del DOM al cerrarla.
    Usa <dialog>, que ya resuelve el foco, la tecla
    Escape y el fondo oscuro.
+   ============================================
+   También incluye confirmar(): un diálogo chico
+   para confirmar acciones (ej: bloquear una cuenta).
    ============================================ */
 
 import { api } from "./api.js";
@@ -89,5 +92,62 @@ export function escucharTarjetas() {
     if (evento.ctrlKey || evento.metaKey || evento.shiftKey || evento.button !== 0) return;
     evento.preventDefault();
     abrirDetallePelicula(enlace.dataset.peliculaId, { titulo: enlace.dataset.titulo, disparador: enlace });
+  });
+}
+
+/**
+ * Pide confirmación antes de una acción. Devuelve una promesa que se
+ * resuelve en true (Confirmar) o false (Cancelar, Escape o clic afuera).
+ * El foco arranca en Cancelar, para que un Enter apurado no confirme.
+ */
+export function confirmar({ titulo, mensaje, textoConfirmar = "Confirmar", peligroso = false, disparador } = {}) {
+  return new Promise((resolver) => {
+    const botonCancelar = crearElemento("button", {
+      clase: "btn btn-outline",
+      texto: "Cancelar",
+      atributos: { type: "button" },
+    });
+    const botonConfirmar = crearElemento("button", {
+      clase: `btn ${peligroso ? "btn-danger" : "btn-primary"}`,
+      texto: textoConfirmar,
+      atributos: { type: "button" },
+    });
+    const dialogo = crearElemento("dialog", {
+      clase: "modal modal--confirmar",
+      atributos: { "aria-labelledby": "confirmar-titulo", "aria-describedby": "confirmar-mensaje" },
+    }, [
+      crearElemento("div", { clase: "confirmar" }, [
+        crearElemento("h2", { clase: "confirmar_titulo", texto: titulo, atributos: { id: "confirmar-titulo" } }),
+        crearElemento("p", { clase: "confirmar_mensaje", texto: mensaje, atributos: { id: "confirmar-mensaje" } }),
+        crearElemento("div", { clase: "confirmar_acciones" }, [botonCancelar, botonConfirmar]),
+      ]),
+    ]);
+
+    let cerrado = false;
+    function cerrar(respuesta) {
+      if (cerrado) return;
+      cerrado = true;
+      if (dialogo.open) dialogo.close();
+      dialogo.remove();
+      document.documentElement.classList.remove("modal-abierto");
+      disparador?.focus();
+      resolver(respuesta);
+    }
+
+    botonCancelar.addEventListener("click", () => cerrar(false));
+    botonConfirmar.addEventListener("click", () => cerrar(true));
+    dialogo.addEventListener("click", (evento) => {
+      if (evento.target === dialogo) cerrar(false);
+    });
+    dialogo.addEventListener("cancel", (evento) => {
+      evento.preventDefault();
+      cerrar(false);
+    });
+    dialogo.addEventListener("close", () => cerrar(false));
+
+    document.body.append(dialogo);
+    document.documentElement.classList.add("modal-abierto");
+    dialogo.showModal();
+    botonCancelar.focus();
   });
 }

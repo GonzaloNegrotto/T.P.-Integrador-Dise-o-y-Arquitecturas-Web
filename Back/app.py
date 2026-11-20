@@ -27,6 +27,7 @@ from functools import partial
 from itertools import zip_longest
 from pathlib import Path
 
+import click
 import requests
 from dotenv import load_dotenv
 from flask import Flask, abort, jsonify, request, send_from_directory, session
@@ -329,6 +330,24 @@ def usuario_administrador():
     return usuario
 
 
+def verificar_jerarquia(actor, usuario, *, propia_cuenta=True, rol_nuevo=None):
+    """Reglas entre roles administrativos. Corta con 403 si alguna no se cumple.
+
+    - Nadie se cambia el rol ni se bloquea a sí mismo (propia_cuenta=True):
+      así nunca queda el sistema sin quien lo administre.
+    - Solo un superadministrador puede modificar a otro superadministrador
+      y asignar o quitar ese rol.
+    """
+    if propia_cuenta and usuario.id == actor.id:
+        raise ErrorApi(403, "No podés cambiar tu propio rol ni bloquear tu propia cuenta.")
+    if actor.rol.nombre == "superadministrador":
+        return
+    if usuario.rol.nombre == "superadministrador":
+        raise ErrorApi(403, "Solo un superadministrador puede modificar a otro superadministrador.")
+    if rol_nuevo == "superadministrador":
+        raise ErrorApi(403, "Solo un superadministrador puede asignar el rol superadministrador.")
+
+
 EDAD_MINIMA = 13
 
 
@@ -405,10 +424,12 @@ def iniciar_sesion():
     email = str(datos.get("email", "")).strip().lower()
     password = str(datos.get("password", ""))
     usuario = db.session.scalar(db.select(Usuario).where(Usuario.email == email))
-    if usuario is not None and usuario.estado == "bloqueado":
-        raise ErrorApi(403, "La cuenta está bloqueada.")
+    # Primero la contraseña: si el aviso de bloqueo saliera antes, cualquiera
+    # podría averiguar qué emails tienen cuenta.
     if usuario is None or not check_password_hash(usuario.password_hash, password):
         raise ErrorApi(401, "El email o la contraseña no son correctos.")
+    if usuario.estado == "bloqueado":
+        raise ErrorApi(403, "La cuenta está bloqueada.")
 
     session.clear()
     session["usuario_id"] = usuario.id
@@ -453,6 +474,8 @@ def modificar_usuario(id_usuario):
     usuario = db.session.get(Usuario, id_usuario)
     if usuario is None:
         raise ErrorApi(404, "La cuenta no existe.")
+    # Corregir los datos de la propia cuenta sí se permite (es lo mismo que Mi perfil).
+    verificar_jerarquia(actor, usuario, propia_cuenta=False)
     datos = request.get_json(silent=True) or {}
     campos = []
 
@@ -496,6 +519,7 @@ def cambiar_estado_usuario(id_usuario):
     estado = (request.get_json(silent=True) or {}).get("estado")
     if estado not in ("activo", "bloqueado"):
         raise ErrorApi(400, "El estado debe ser 'activo' o 'bloqueado'.")
+    verificar_jerarquia(actor, usuario)
     if usuario.estado == estado:
         return jsonify(usuario=respuesta_usuario(usuario))
 
@@ -508,8 +532,6 @@ def cambiar_estado_usuario(id_usuario):
         {"estado": estado},
     )
     db.session.commit()
-    if usuario.id == actor.id and estado == "bloqueado":
-        session.clear()
     return jsonify(usuario=respuesta_usuario(usuario))
 
 
@@ -524,11 +546,16 @@ def asignar_rol_usuario(id_usuario):
     rol = db.session.scalar(db.select(Rol).where(Rol.nombre == nombre_rol))
     if rol is None:
         raise ErrorApi(400, "El rol indicado no existe.")
+    verificar_jerarquia(actor, usuario, rol_nuevo=rol.nombre)
     if usuario.rol_id == rol.id:
         return jsonify(usuario=respuesta_usuario(usuario))
 
+    rol_anterior = usuario.rol.nombre
     usuario.rol = rol
-    registrar_auditoria(actor.id, "asignar rol", "usuarios", usuario.id, {"rol_id": rol.id})
+    registrar_auditoria(
+        actor.id, "asignar rol", "usuarios", usuario.id,
+        {"rol_id": rol.id, "rol": rol.nombre, "rol_anterior": rol_anterior},
+    )
     db.session.commit()
     return jsonify(usuario=respuesta_usuario(usuario))
 
@@ -541,6 +568,112 @@ def limpiar_cache():
     registrar_auditoria(actor.id, "vaciar la caché", "cache", None, {"entradas": cantidad})
     db.session.commit()
     return jsonify(entradas_eliminadas=cantidad)
+
+
+LIMITE_USUARIOS_ADMIN = 200
+LIMITE_AUDITORIA = (50, 200)  # (por defecto, máximo)
+
+
+def resumir_usuario_admin(usuario):
+    """Lo que necesita la tabla de administración. Nunca incluye el hash de la contraseña."""
+    return {
+        "id": usuario.id,
+        "nombre": usuario.nombre,
+        "email": usuario.email,
+        "rol": usuario.rol.nombre,
+        "estado": usuario.estado,
+        "creado_en": usuario.creado_en.isoformat() if usuario.creado_en else None,
+    }
+
+
+@app.get("/api/admin/usuarios")
+def listar_usuarios_admin():
+    """Cuentas registradas, las más nuevas primero. ?q= busca por nombre o email."""
+    usuario_administrador()
+    consulta = (request.args.get("q") or "").strip()
+    if len(consulta) > 100:
+        raise ErrorApi(400, "La búsqueda es demasiado larga (máximo 100 caracteres).")
+
+    seleccion = db.select(Usuario).order_by(Usuario.creado_en.desc(), Usuario.id.desc())
+    if consulta:
+        # % y _ son comodines de LIKE: se escapan para buscar el texto tal cual.
+        patron = "%" + consulta.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        seleccion = seleccion.where(
+            Usuario.nombre.ilike(patron, escape="\\") | Usuario.email.ilike(patron, escape="\\")
+        )
+    usuarios = db.session.scalars(seleccion.limit(LIMITE_USUARIOS_ADMIN)).all()
+    return jsonify(usuarios=[resumir_usuario_admin(u) for u in usuarios])
+
+
+@app.get("/api/admin/roles")
+def listar_roles():
+    """Roles disponibles, para el selector de la tabla de usuarios."""
+    usuario_administrador()
+    roles = db.session.scalars(db.select(Rol).order_by(Rol.id)).all()
+    return jsonify(roles=[{"nombre": r.nombre, "descripcion": r.descripcion} for r in roles])
+
+
+@app.get("/api/admin/auditoria")
+def listar_auditoria():
+    """Últimas acciones registradas (?limite=, entre 1 y 200), con el email de quien las hizo."""
+    usuario_administrador()
+    por_defecto, maximo = LIMITE_AUDITORIA
+    limite = request.args.get("limite", por_defecto, type=int)
+    if not 1 <= limite <= maximo:
+        raise ErrorApi(400, f"El límite tiene que estar entre 1 y {maximo}.")
+
+    filas = db.session.execute(
+        db.select(Auditoria, Usuario.email)
+        .outerjoin(Usuario, Auditoria.usuario_id == Usuario.id)
+        .order_by(Auditoria.fecha.desc(), Auditoria.id.desc())
+        .limit(limite)
+    ).all()
+    return jsonify(auditoria=[
+        {
+            "id": entrada.id,
+            "fecha": entrada.fecha.isoformat() if entrada.fecha else None,
+            "accion": entrada.accion,
+            "entidad": entrada.entidad,
+            "entidad_id": entrada.entidad_id,
+            "detalle": entrada.detalle,
+            "actor": email,  # None: acción del sistema, de la consola o de una cuenta ya eliminada
+        }
+        for entrada, email in filas
+    ])
+
+
+@app.cli.command("crear-admin")
+@click.argument("email")
+def crear_admin(email):
+    """Promueve a superadministrador una cuenta ya registrada.
+
+    Sirve para tener el primer administrador sin escribir SQL:
+
+        flask --app Back/app.py crear-admin nombre@mail.com
+    """
+    email = email.strip().lower()
+    usuario = db.session.scalar(db.select(Usuario).where(Usuario.email == email))
+    if usuario is None:
+        raise click.ClickException(
+            f"No hay ninguna cuenta con el email {email}. Registrala primero desde la página de registro."
+        )
+    rol = db.session.scalar(db.select(Rol).where(Rol.nombre == "superadministrador"))
+    if rol is None:
+        raise click.ClickException("No existe el rol superadministrador. ¿Corriste 'flask db upgrade'?")
+    if usuario.rol_id == rol.id and usuario.estado == "activo":
+        click.echo(f"{email} ya es superadministrador.")
+        return
+
+    rol_anterior = usuario.rol.nombre
+    usuario.rol = rol
+    # Si la cuenta estaba bloqueada se reactiva: es la vía de recuperación del primer administrador.
+    usuario.estado = "activo"
+    registrar_auditoria(
+        None, "asignar rol", "usuarios", usuario.id,
+        {"rol_id": rol.id, "rol": rol.nombre, "rol_anterior": rol_anterior, "origen": "consola"},
+    )
+    db.session.commit()
+    click.echo(f"Listo: {email} ahora es superadministrador.")
 
 
 # ============================================

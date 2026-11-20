@@ -58,7 +58,7 @@ function guardarEmailRecordado(email) {
  */
 function paginaDeVuelta() {
   const volver = new URLSearchParams(window.location.search).get("volver");
-  return volver && /^\/(index\.html)?$|^\/pages\/[a-z-]+\.html$/.test(volver) ? volver : null;
+  return volver && /^\/(index\.html)?$|^\/(pages|admin)\/[a-z-]+\.html$/.test(volver) ? volver : null;
 }
 
 /* ---------- Envío ---------- */

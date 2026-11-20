@@ -148,6 +148,18 @@ export const api = {
   cambiarPassword: (datos) => pedir("/api/perfil/password", { metodo: "PUT", cuerpo: datos }),
   eliminarCuenta: (passwordActual) =>
     pedir("/api/perfil", { metodo: "DELETE", cuerpo: { password_actual: passwordActual } }),
+
+  // Administración (requieren rol administrador o superadministrador)
+  adminUsuarios: (consulta, opciones) =>
+    pedir(`/api/admin/usuarios?${parametrosSinVacios({ q: consulta })}`, opciones),
+  adminRoles: (opciones) => pedir("/api/admin/roles", opciones),
+  adminAuditoria: (limite, opciones) =>
+    pedir(`/api/admin/auditoria?${new URLSearchParams({ limite })}`, opciones),
+  asignarRol: (idUsuario, rol) =>
+    pedir(`/api/admin/usuarios/${encodeURIComponent(idUsuario)}/rol`, { metodo: "PUT", cuerpo: { rol } }),
+  cambiarEstado: (idUsuario, estado) =>
+    pedir(`/api/admin/usuarios/${encodeURIComponent(idUsuario)}/estado`, { metodo: "POST", cuerpo: { estado } }),
+  vaciarCache: () => pedir("/api/admin/cache", { metodo: "DELETE" }),
 };
 
 /* ---------- Imágenes de TMDB ---------- */

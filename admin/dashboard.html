@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Panel de administración de MediaLens: cuentas, roles y auditoría." />
+  <meta name="robots" content="noindex" />
+  <title>Administración | MediaLens</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23B8323C'/%3E%3Ccircle cx='12' cy='11' r='5' fill='%23F5F1ED' fill-opacity='.8'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/layout.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <script src="../assets/js/aviso-servidor.js" defer></script>
+  <script type="module" src="../assets/js/admin.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container navbar">
+      <a class="navbar_brand" href="../index.html">
+        <span class="navbar_logo" aria-hidden="true"></span>
+        Media<span>Lens</span>
+      </a>
+      <button class="navbar_toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu-principal">&#9776;</button>
+      <nav class="navbar_menu" id="menu-principal" aria-label="Principal">
+        <ul class="navbar_links">
+          <li><a href="../index.html">Inicio</a></li>
+          <li><a href="../pages/rankings.html">Rankings</a></li>
+          <li><a href="../pages/estadisticas.html">Estadísticas</a></li>
+          <li><a href="../pages/recomendaciones.html">Recomendaciones</a></li>
+          <li><a href="../pages/cines.html">Cines cercanos</a></li>
+        </ul>
+        <div class="navbar_actions">
+          <a class="btn btn-outline" href="../pages/login.html">Ingresar</a>
+          <a class="btn btn-primary" href="../pages/registro.html">Registrarse</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="admin">
+    <section class="container admin_cabecera" aria-labelledby="admin-titulo">
+      <p class="eyebrow">Administración</p>
+      <h1 class="admin_titulo" id="admin-titulo">Panel de administración</h1>
+      <p class="admin_intro text-muted" id="admin-rol" aria-live="polite">Verificando tus permisos…</p>
+    </section>
+
+    <!-- Sin sesión, sin permisos o error: el mensaje reemplaza al panel -->
+    <div class="container" id="admin-acceso"></div>
+
+    <div class="container admin_contenido" id="admin-contenido" hidden>
+      <!-- Usuarios -->
+      <section class="admin_seccion" aria-labelledby="usuarios-titulo">
+        <div class="section_head">
+          <div class="section_title-group">
+            <h2 id="usuarios-titulo">Usuarios</h2>
+            <p class="section_status text-muted" id="usuarios-estado" aria-live="polite"></p>
+          </div>
+          <form class="admin_buscador" id="form-usuarios" role="search" novalidate>
+            <label for="buscar-usuarios" class="visually-hidden">Buscar por nombre o email</label>
+            <input type="search" id="buscar-usuarios" name="q" placeholder="Buscar por nombre o email…" maxlength="100" autocomplete="off" />
+            <button type="submit" class="btn btn-outline">Buscar</button>
+          </form>
+        </div>
+
+        <div class="admin_tabla" id="tabla-usuarios">
+          <table>
+            <caption class="visually-hidden">Cuentas registradas, con su rol y su estado</caption>
+            <thead>
+              <tr>
+                <th scope="col">Nombre</th>
+                <th scope="col">Email</th>
+                <th scope="col">Rol</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Alta</th>
+                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody id="filas-usuarios"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Auditoría -->
+      <section class="admin_seccion" aria-labelledby="auditoria-titulo">
+        <div class="section_head">
+          <div class="section_title-group">
+            <h2 id="auditoria-titulo">Auditoría</h2>
+            <p class="section_status text-muted" id="auditoria-estado" aria-live="polite"></p>
+          </div>
+          <button class="btn btn-outline" type="button" id="actualizar-auditoria">Actualizar</button>
+        </div>
+
+        <div class="admin_tabla" id="tabla-auditoria">
+          <table>
+            <caption class="visually-hidden">Últimas acciones administrativas registradas</caption>
+            <thead>
+              <tr>
+                <th scope="col">Fecha</th>
+                <th scope="col">Quién</th>
+                <th scope="col">Acción</th>
+                <th scope="col">Sobre</th>
+                <th scope="col">Detalle</th>
+              </tr>
+            </thead>
+            <tbody id="filas-auditoria"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Caché -->
+      <section class="admin_seccion admin_cache" aria-labelledby="cache-titulo">
+        <div>
+          <h2 id="cache-titulo">Caché de TMDB</h2>
+          <p class="text-muted">
+            El servidor guarda por un tiempo las respuestas de TMDB para responder más rápido. Vaciarla obliga a pedir
+            los datos de nuevo, por ejemplo si una película se actualizó.
+          </p>
+        </div>
+        <button class="btn btn-danger" type="button" id="vaciar-cache">Vaciar caché</button>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer_bottom">
+        <p>&copy; 2026 MediaLens &mdash; TP Integrador, Diseño y Arquitecturas Web.</p>
+        <p><a href="../pages/privacidad.html">Política de privacidad</a></p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
