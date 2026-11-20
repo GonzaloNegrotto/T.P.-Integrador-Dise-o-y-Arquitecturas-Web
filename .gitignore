@@ -37,3 +37,8 @@ Desktop.ini
 # ===== Respaldos de la base =====
 # Contienen datos personales (emails, fechas de nacimiento y hashes de contraseñas).
 respaldos/
+
+# ===== Documentación del TP =====
+# El informe y las devoluciones se entregan aparte: en GitHub va solo el código.
+Documentacion/
+docs/

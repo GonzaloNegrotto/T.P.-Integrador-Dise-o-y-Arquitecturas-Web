@@ -82,6 +82,7 @@ repositorio**.
 | `SECRET_KEY` | Clave para firmar la cookie de sesión | Generarla con el comando de abajo y pegar el resultado |
 | `CHATBOT_API_KEY` | *(Opcional)* Key de Gemini para que el chatbot responda con IA | Ver la sección [Chatbot](#8-chatbot-asistente-de-películas). Si queda vacía, el chatbot funciona igual, con respuestas automáticas |
 | `CHATBOT_MODELO` | *(Opcional)* Modelo de Gemini | Vacío usa `gemini-3.5-flash-lite` |
+| `FLASK_DEBUG` | *(Opcional, solo para desarrollo)* Modo debug de Flask | Vacío o `0`: apagado (lo correcto para usar o entregar el sitio). `1`: recarga el servidor al guardar cambios y muestra los errores detallados |
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
@@ -106,6 +107,16 @@ flask --app Back/app.py db upgrade
 
 Aplica las migraciones de la carpeta `migrations/`: crea las tablas `usuarios`, `roles`, `favoritos` y `auditoria`,
 y carga los tres roles. Se puede volver a ejecutar sin problema: solo aplica lo que falte.
+
+**Alternativa: script SQL.** `database/medialens.sql` crea el mismo esquema final (tablas, claves, restricciones,
+índices y roles) directamente en PostgreSQL, sin Flask. Sirve para revisar el modelo o para crear la base a mano:
+
+```bash
+psql "postgresql://usuario:contraseña@host/base" -f database/medialens.sql
+```
+
+Se ejecuta **sobre una base vacía** y en lugar de `db upgrade` (no los dos). El script deja registrada la versión de
+migración, así que después las migraciones nuevas se siguen aplicando con `flask --app Back/app.py db upgrade`.
 
 ### 2.6. Levantar el sitio
 
@@ -175,8 +186,8 @@ Reglas que valida el servidor (no solo la interfaz):
 
 ## 5. Respaldo de la base de datos
 
-`Back/respaldo.py` agrega comandos para guardar y recuperar todos los datos (usuarios, roles, favoritas y
-auditoría) en un archivo JSON comprimido. No necesita `pg_dump`.
+`Back/respaldo.py` agrega comandos para guardar y recuperar todos los datos en un archivo JSON comprimido
+(`respaldos/medialens-AAAAMMDD-HHMMSS.json.gz`). No necesita `pg_dump`.
 
 ```bash
 flask --app Back/app.py respaldo crear                                     # nuevo respaldo en respaldos/
@@ -184,11 +195,52 @@ flask --app Back/app.py respaldo listar                                    # res
 flask --app Back/app.py respaldo restaurar respaldos/medialens-AAAAMMDD-HHMMSS.json.gz
 ```
 
-- **Restaurar** reemplaza todos los datos actuales: pide confirmación (se puede saltear con `--si`) y antes
-  guarda un respaldo del estado actual.
-- Se conservan los 10 respaldos más recientes. Se puede cambiar con `RESPALDOS_A_CONSERVAR` en el `.env`; la
-  carpeta, con `RESPALDO_DIR`.
-- La carpeta `respaldos/` está excluida del repositorio porque contiene datos personales.
+**Qué se guarda:** las 4 tablas (`roles`, `usuarios`, `favoritos` y `auditoria`) y la versión de migración de la
+base. El catálogo de películas no hace falta respaldarlo: se consulta a TMDB.
+
+### 5.1. Frecuencia
+
+| Cuándo | Cómo |
+| --- | --- |
+| **Todos los días** (03:00) | Tarea programada que ejecuta `respaldo crear` (ver abajo) |
+| **Antes de cada migración** (`db upgrade`) | `respaldo crear` a mano |
+| **Antes de cada entrega** o de una prueba que modifique datos | `respaldo crear` a mano |
+| Antes de restaurar | Automático: `respaldo restaurar` guarda primero el estado actual |
+
+Se conservan los 10 respaldos más recientes (con el diario, unos 10 días de historia). Se puede cambiar con
+`RESPALDOS_A_CONSERVAR` en el `.env`; la carpeta, con `RESPALDO_DIR`. Además, Neon guarda su propio historial y
+permite volver la base a un momento de las últimas horas desde su panel (*Restore*).
+
+**Programar el respaldo diario en Windows** (una sola vez, en PowerShell desde la carpeta del proyecto; la tarea
+se ve y se borra desde el *Programador de tareas*):
+
+```powershell
+$accion = New-ScheduledTaskAction -Execute "$PWD\venv\Scripts\flask.exe" -Argument "--app Back/app.py respaldo crear" -WorkingDirectory "$PWD"
+Register-ScheduledTask -TaskName "MediaLens respaldo" -Action $accion -Trigger (New-ScheduledTaskTrigger -Daily -At 03:00)
+```
+
+En Linux o macOS, con `crontab -e`:
+
+```cron
+0 3 * * * cd /ruta/al/proyecto && venv/bin/flask --app Back/app.py respaldo crear
+```
+
+### 5.2. Recuperación paso a paso
+
+1. **Detener el servidor** (`Ctrl + C`) para que nadie escriba datos mientras se recupera.
+2. **Elegir el respaldo:** `flask --app Back/app.py respaldo listar` muestra los archivos con fecha y tamaño.
+3. **Si la base se perdió o es nueva**, crear primero las tablas: `flask --app Back/app.py db upgrade` (o el script
+   `database/medialens.sql`). La base tiene que estar en la misma versión de migración que el respaldo; si no,
+   el comando avisa y no toca nada.
+4. **Restaurar:** `flask --app Back/app.py respaldo restaurar respaldos/medialens-AAAAMMDD-HHMMSS.json.gz`.
+   Pide confirmación, guarda un respaldo del estado actual y reemplaza todos los datos en una sola transacción:
+   si algo falla, la base queda como estaba.
+5. **Verificar:** levantar el servidor, iniciar sesión con una cuenta administradora y revisar en el panel que
+   estén los usuarios y la auditoría.
+6. **Si el resultado no es el esperado**, restaurar el respaldo que se generó en el paso 4 (el más reciente de
+   `respaldo listar`) para volver al estado anterior.
+
+La carpeta `respaldos/` está excluida del repositorio porque contiene datos personales.
 
 ## 6. Cumplimiento de la Ley 25.326 (Protección de Datos Personales)
 
@@ -211,7 +263,9 @@ flask --app Back/app.py respaldo restaurar respaldos/medialens-AAAAMMDD-HHMMSS.j
 - **Servicios externos.** TMDB (películas), Nominatim/OpenStreetMap (cines y direcciones) y, opcionalmente,
   Google Gemini (redacción de las respuestas del chatbot). Todos se consultan desde el servidor.
 - **Base relacional.** PostgreSQL con SQLAlchemy (`Back/modeloDatos.py`) y migraciones versionadas con
-  Flask-Migrate (`migrations/`).
+  Flask-Migrate (`migrations/`). El esquema final también está como script SQL en `database/medialens.sql`.
+- **Utilidades.** `scripts/pruebaApi.py` prueba la conexión con TMDB usando el token del `.env`
+  (`python scripts/pruebaApi.py`).
 
 ## 8. Chatbot (asistente de películas)
 

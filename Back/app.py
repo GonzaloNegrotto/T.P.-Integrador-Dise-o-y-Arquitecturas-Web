@@ -84,9 +84,12 @@ log = app.logger
 # de SQLAlchemy. Flask-Migrate usa esta misma instancia para las migraciones.
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-# Se recomienda definir SECRET_KEY en .env; la URL privada es un respaldo
-# estable para no invalidar sesiones existentes si falta esa variable.
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY") or DATABASE_URL
+# SECRET_KEY tiene que estar en el .env. Si falta, se usa la URL privada de la
+# base como respaldo (para no invalidar las sesiones existentes) y se avisa.
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    print("ATENCIÓN: falta SECRET_KEY en el .env; se usa un valor de respaldo. Generala como indica el README.")
+app.config["SECRET_KEY"] = SECRET_KEY or DATABASE_URL
 # La cookie de sesión no se envía en pedidos iniciados desde otros sitios.
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 db.init_app(app)
@@ -2128,4 +2131,7 @@ if __name__ == "__main__":
     if not TOKEN:
         print("ATENCIÓN: falta API_READ_ACCESS_TOKEN en el .env; la API va a responder con error.")
     print("MediaLens corriendo en http://localhost:5000  (Ctrl+C para detener)")
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    # El modo debug (recarga automática y errores detallados) solo se activa
+    # a propósito, con FLASK_DEBUG=1 en el .env. Nunca en una entrega o en producción.
+    modo_debug = os.getenv("FLASK_DEBUG", "").strip().lower() in ("1", "true", "si", "sí")
+    app.run(host="127.0.0.1", port=5000, debug=modo_debug)

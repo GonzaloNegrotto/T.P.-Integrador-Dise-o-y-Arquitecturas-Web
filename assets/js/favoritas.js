@@ -7,6 +7,7 @@
    ============================================ */
 
 import { api } from "./api.js";
+import { rutaSitio } from "./layout.js";
 import { mostrarToast } from "./ui.js";
 
 const estado = {
@@ -15,7 +16,6 @@ const estado = {
   enCurso: new Set(), // ids con un pedido pendiente (evita el doble clic)
 };
 
-const enPagina = window.location.pathname.includes("/pages/");
 const enMisFavoritas = window.location.pathname.endsWith("/favoritas.html");
 
 export const esFavorita = (id) => estado.ids.has(Number(id));
@@ -61,7 +61,7 @@ function avisarCambio(detalle) {
 function pedirInicioDeSesion() {
   const volver = encodeURIComponent(window.location.pathname);
   mostrarToast("Ingresá a tu cuenta para guardar tus películas favoritas.", {
-    accion: { texto: "Ingresar", href: `${enPagina ? "" : "pages/"}login.html?volver=${volver}` },
+    accion: { texto: "Ingresar", href: `${rutaSitio("pages/login.html")}?volver=${volver}` },
   });
 }
 
@@ -90,7 +90,7 @@ export async function cambiarFavorita(id, titulo, guardar) {
       avisarCambio({ id, guardada: true, favorita });
       mostrarToast(`Guardaste “${titulo}” en tus favoritas.`, {
         tipo: "exito",
-        accion: enMisFavoritas ? null : { texto: "Ver lista", href: `${enPagina ? "" : "pages/"}favoritas.html` },
+        accion: enMisFavoritas ? null : { texto: "Ver lista", href: rutaSitio("pages/favoritas.html") },
       });
     } else {
       await api.quitarFavorita(id);
