@@ -141,6 +141,13 @@ export const api = {
     pedir("/api/favoritos", { metodo: "POST", cuerpo: { pelicula_id: Number(idPelicula) } }),
   quitarFavorita: (idPelicula) =>
     pedir(`/api/favoritos/${encodeURIComponent(idPelicula)}`, { metodo: "DELETE" }),
+
+  // Perfil (requieren sesión iniciada). Cambiar el email o la contraseña y
+  // eliminar la cuenta piden además la contraseña actual (password_actual).
+  actualizarPerfil: (datos) => pedir("/api/perfil", { metodo: "PUT", cuerpo: datos }),
+  cambiarPassword: (datos) => pedir("/api/perfil/password", { metodo: "PUT", cuerpo: datos }),
+  eliminarCuenta: (passwordActual) =>
+    pedir("/api/perfil", { metodo: "DELETE", cuerpo: { password_actual: passwordActual } }),
 };
 
 /* ---------- Imágenes de TMDB ---------- */

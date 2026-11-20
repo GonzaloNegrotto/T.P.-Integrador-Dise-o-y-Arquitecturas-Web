@@ -65,6 +65,68 @@
                 <button type="submit" class="btn btn-primary">Buscar</button>
               </div>
             </div>
+
+            <!-- Filtros de la búsqueda (RF02, CU01). Los selects tienen el mismo name que los parámetros de /api/buscar -->
+            <details class="search-filtros" id="filtros-busqueda">
+              <summary>
+                <span>Filtros</span>
+                <span class="search-filtros_cantidad" id="filtros-cantidad" hidden></span>
+              </summary>
+              <div class="search-filtros_panel">
+                <div class="form-field">
+                  <label for="filtro-genero">Género</label>
+                  <select id="filtro-genero" name="genero">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="filtro-anio">Año de estreno</label>
+                  <select id="filtro-anio" name="anio">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="filtro-idioma">Idioma original</label>
+                  <select id="filtro-idioma" name="idioma">
+                    <option value="">Todos</option>
+                    <option value="es">Español</option>
+                    <option value="en">Inglés</option>
+                    <option value="fr">Francés</option>
+                    <option value="it">Italiano</option>
+                    <option value="de">Alemán</option>
+                    <option value="pt">Portugués</option>
+                    <option value="ja">Japonés</option>
+                    <option value="ko">Coreano</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="filtro-puntaje">Puntaje mínimo</label>
+                  <select id="filtro-puntaje" name="puntaje_min">
+                    <option value="">Cualquiera</option>
+                    <option value="5">5 o más</option>
+                    <option value="6">6 o más</option>
+                    <option value="7">7 o más</option>
+                    <option value="8">8 o más</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="filtro-orden">Ordenar por</label>
+                  <select id="filtro-orden" name="orden">
+                    <option value="relevancia">Relevancia</option>
+                    <option value="puntaje">Puntaje</option>
+                    <option value="popularidad">Popularidad</option>
+                    <option value="fecha">Fecha de estreno</option>
+                  </select>
+                </div>
+                <div class="search-filtros_pie">
+                  <button class="btn btn-outline btn-sm" type="button" id="limpiar-filtros" hidden>Quitar filtros</button>
+                  <p class="field-hint">
+                    Los filtros se aplican a la búsqueda por título. Para explorar sin escribir un título, usá
+                    <a href="pages/rankings.html">Rankings</a>.
+                  </p>
+                </div>
+              </div>
+            </details>
           </form>
 
           <div class="hero_chips" role="group" aria-label="Filtrar tendencias por género">

@@ -161,6 +161,11 @@
   white-space: nowrap;
 }
 
+.navbar_usuario:hover,
+.navbar_usuario[aria-current="page"] {
+  color: var(--color-secondary);
+}
+
 /* Menú responsivo: con 5 links + 2 botones, en tablet ya no entra en una línea.
    El mismo corte (960px) está en layout.js para cerrar el menú al agrandar. */
 @media (max-width: 1080px) {
@@ -1034,5 +1039,52 @@
   .stats_bloque--mias {
     margin-top: var(--space-12);
     padding-top: var(--space-8);
+  }
+}
+
+/* ============================================
+   Página Mi perfil
+   ============================================ */
+
+.perfil {
+  padding-bottom: var(--space-16);
+}
+
+.perfil_cabecera {
+  padding-block: var(--space-12) var(--space-6);
+}
+
+.perfil_titulo {
+  margin-bottom: var(--space-3);
+}
+
+.perfil_intro {
+  max-width: 46rem;
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+/* Los datos a la izquierda; contraseña y eliminar cuenta, apilados a la derecha */
+.perfil_cuenta {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+
+.perfil_columna {
+  display: grid;
+  gap: var(--space-6);
+}
+
+@media (max-width: 900px) {
+  .perfil_cuenta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .perfil_cabecera {
+    padding-block: var(--space-8) var(--space-4);
   }
 }

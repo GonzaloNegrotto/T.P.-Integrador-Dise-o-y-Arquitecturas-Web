@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Corregí tus datos, cambiá tus géneros favoritos o eliminá tu cuenta de MediaLens." />
+  <title>Mi perfil | MediaLens</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23B8323C'/%3E%3Ccircle cx='12' cy='11' r='5' fill='%23F5F1ED' fill-opacity='.8'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/layout.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <script src="../assets/js/aviso-servidor.js" defer></script>
+  <script type="module" src="../assets/js/perfil.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container navbar">
+      <a class="navbar_brand" href="../index.html">
+        <span class="navbar_logo" aria-hidden="true"></span>
+        Media<span>Lens</span>
+      </a>
+      <button class="navbar_toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu-principal">&#9776;</button>
+      <nav class="navbar_menu" id="menu-principal" aria-label="Principal">
+        <ul class="navbar_links">
+          <li><a href="../index.html">Inicio</a></li>
+          <li><a href="rankings.html">Rankings</a></li>
+          <li><a href="estadisticas.html">Estadísticas</a></li>
+          <li><a href="recomendaciones.html">Recomendaciones</a></li>
+          <li><a href="cines.html">Cines cercanos</a></li>
+        </ul>
+        <div class="navbar_actions">
+          <a class="btn btn-outline" href="login.html">Ingresar</a>
+          <a class="btn btn-primary" href="registro.html">Registrarse</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="perfil">
+    <section class="container perfil_cabecera" aria-labelledby="perfil-titulo">
+      <p class="eyebrow">Mi cuenta</p>
+      <h1 class="perfil_titulo" id="perfil-titulo">Mi perfil</h1>
+      <p class="perfil_intro text-muted">
+        Corregí tus datos, cambiá tus géneros favoritos o eliminá tu cuenta cuando quieras. Son tus derechos de
+        rectificación y supresión según la Ley 25.326.
+      </p>
+    </section>
+
+    <div class="container perfil_estado" id="perfil-estado" aria-live="polite">
+      <noscript><p class="placeholder-note">Activá JavaScript para ver tu perfil.</p></noscript>
+    </div>
+
+    <div class="container perfil_cuenta" id="perfil-cuenta" hidden>
+      <section class="perfil_tarjeta" aria-labelledby="titulo-datos">
+        <h2 id="titulo-datos">Mis datos</h2>
+        <form class="form" id="form-datos" novalidate>
+          <div class="form-row">
+            <div class="form-field" data-campo="nombre">
+              <label for="datos-nombre">Nombre</label>
+              <input type="text" id="datos-nombre" name="nombre" autocomplete="given-name" maxlength="40" required />
+            </div>
+            <div class="form-field" data-campo="email">
+              <label for="datos-email">Email</label>
+              <input type="email" id="datos-email" name="email" autocomplete="email" required />
+            </div>
+          </div>
+
+          <!-- Solo aparece si se cambia el email -->
+          <div class="form-field" data-campo="password_actual" id="campo-password-email" hidden>
+            <label for="datos-password">Contraseña actual</label>
+            <div class="password-field">
+              <input type="password" id="datos-password" name="password_actual" autocomplete="current-password" aria-describedby="ayuda-password-email" />
+              <button type="button" class="password-toggle" data-mostrar-contrasena aria-controls="datos-password" aria-pressed="false">Mostrar</button>
+            </div>
+            <p class="field-hint" id="ayuda-password-email">Te la pedimos para confirmar que sos vos quien cambia el email.</p>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field" data-campo="nacimiento">
+              <label for="datos-nacimiento">Fecha de nacimiento</label>
+              <input type="date" id="datos-nacimiento" name="nacimiento" autocomplete="bday" aria-describedby="ayuda-nacimiento" required />
+              <p class="field-hint" id="ayuda-nacimiento">Necesitás tener al menos 13 años.</p>
+            </div>
+          </div>
+
+          <fieldset class="form-field" data-campo="generos">
+            <legend>
+              Géneros favoritos
+              <span class="contador" id="contador-generos" aria-live="polite">0 de 5 elegidos</span>
+            </legend>
+            <div class="check-chips">
+              <label class="check-chip"><input type="checkbox" name="generos" value="Acción" /><span>Acción</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Aventura" /><span>Aventura</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Animación" /><span>Animación</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Comedia" /><span>Comedia</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Drama" /><span>Drama</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Terror" /><span>Terror</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Ciencia ficción" /><span>Ciencia ficción</span></label>
+              <label class="check-chip"><input type="checkbox" name="generos" value="Romance" /><span>Romance</span></label>
+            </div>
+          </fieldset>
+
+          <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        </form>
+      </section>
+
+      <div class="perfil_columna">
+        <section class="perfil_tarjeta" aria-labelledby="titulo-password">
+          <h2 id="titulo-password">Contraseña</h2>
+          <form class="form" id="form-password" novalidate>
+            <div class="form-field" data-campo="password_actual">
+              <label for="clave-actual">Contraseña actual</label>
+              <div class="password-field">
+                <input type="password" id="clave-actual" name="password_actual" autocomplete="current-password" required />
+                <button type="button" class="password-toggle" data-mostrar-contrasena aria-controls="clave-actual" aria-pressed="false">Mostrar</button>
+              </div>
+            </div>
+
+            <div class="form-field" data-campo="password_nueva">
+              <label for="clave-nueva">Contraseña nueva</label>
+              <div class="password-field">
+                <input type="password" id="clave-nueva" name="password_nueva" autocomplete="new-password" aria-describedby="requisitos-password" required />
+                <button type="button" class="password-toggle" data-mostrar-contrasena aria-controls="clave-nueva" aria-pressed="false">Mostrar</button>
+              </div>
+              <div class="strength" id="fuerza-contrasena" data-nivel="0" aria-hidden="true">
+                <span class="strength_bar"></span>
+                <span class="strength_bar"></span>
+                <span class="strength_bar"></span>
+                <span class="strength_bar"></span>
+              </div>
+              <p class="strength_label" id="fuerza-etiqueta" aria-live="polite"></p>
+              <ul class="requisitos" id="requisitos-password">
+                <li data-requisito="largo">8 caracteres o más <span class="visually-hidden">(pendiente)</span></li>
+                <li data-requisito="mayuscula">Una mayúscula <span class="visually-hidden">(pendiente)</span></li>
+                <li data-requisito="numero">Un número <span class="visually-hidden">(pendiente)</span></li>
+              </ul>
+            </div>
+
+            <div class="form-field" data-campo="confirmacion">
+              <label for="clave-confirmacion">Repetir contraseña nueva</label>
+              <div class="password-field">
+                <input type="password" id="clave-confirmacion" name="confirmacion" autocomplete="new-password" required />
+                <button type="button" class="password-toggle" data-mostrar-contrasena aria-controls="clave-confirmacion" aria-pressed="false">Mostrar</button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Cambiar contraseña</button>
+          </form>
+        </section>
+
+        <section class="perfil_tarjeta perfil_tarjeta--peligro" aria-labelledby="titulo-eliminar">
+          <h2 id="titulo-eliminar">Eliminar mi cuenta</h2>
+          <p class="text-muted">
+            Se borran tu cuenta, tus datos personales y tu lista de Mis favoritas. No se puede deshacer
+            (Ley 25.326, art. 16). Podés volver a registrarte cuando quieras.
+          </p>
+          <button class="btn btn-danger" type="button" id="abrir-eliminar" aria-expanded="false" aria-controls="form-eliminar">Eliminar mi cuenta…</button>
+
+          <form class="form perfil_confirmar" id="form-eliminar" novalidate hidden>
+            <div class="form-field" data-campo="password_actual">
+              <label for="eliminar-password">Para confirmar, ingresá tu contraseña</label>
+              <div class="password-field">
+                <input type="password" id="eliminar-password" name="password_actual" autocomplete="current-password" required />
+                <button type="button" class="password-toggle" data-mostrar-contrasena aria-controls="eliminar-password" aria-pressed="false">Mostrar</button>
+              </div>
+            </div>
+            <div class="form-field" data-campo="entiendo">
+              <label class="checkbox">
+                <input type="checkbox" id="eliminar-entiendo" name="entiendo" required />
+                <span>Entiendo que mi cuenta y mis favoritas se borran para siempre.</span>
+              </label>
+            </div>
+            <div class="perfil_acciones">
+              <button type="submit" class="btn btn-danger">Sí, eliminar mi cuenta</button>
+              <button type="button" class="btn btn-outline" id="cancelar-eliminar">Cancelar</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer_bottom">
+        <p>&copy; 2026 MediaLens &mdash; TP Integrador, Diseño y Arquitecturas Web.</p>
+        <p>Datos e imágenes de <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a>.</p>
+        <p><a href="privacidad.html">Política de privacidad</a></p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

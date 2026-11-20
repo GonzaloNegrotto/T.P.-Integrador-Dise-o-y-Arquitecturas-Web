@@ -49,9 +49,14 @@ function mostrarUsuario(usuario) {
   const acciones = obtenerAccionesSesion();
   if (!acciones) return;
 
-  const saludo = document.createElement("span");
+  // El saludo lleva al perfil: ahí se corrigen los datos y se puede eliminar la cuenta.
+  const enPagina = window.location.pathname.includes("/pages/");
+  const saludo = document.createElement("a");
   saludo.className = "navbar_usuario";
+  saludo.href = enPagina ? "perfil.html" : "pages/perfil.html";
   saludo.textContent = `Hola, ${usuario.nombre}`;
+  saludo.title = "Ir a mi perfil";
+  if (window.location.pathname.endsWith("/perfil.html")) saludo.setAttribute("aria-current", "page");
 
   const boton = document.createElement("button");
   boton.className = "btn btn-outline";
